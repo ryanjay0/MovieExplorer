@@ -22,3 +22,17 @@ jobs:
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
+
+    - name: Build Release|Win32
+      run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Release /p:Platform=Win32 /m /verbosity:normal
+
+    - name: Setup VS Dev Cmd for x64
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Build Debug|x64
+      run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /verbosity:normal
+
+    - name: Build Release|x64
+      run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Release /p:Platform=x64 /m /verbosity:normal
