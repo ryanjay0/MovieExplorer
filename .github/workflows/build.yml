@@ -24,29 +24,29 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Check WINAPI_FAMILY values
+    - name: Test minimal WinHTTP compile
       run: |
-        $sdk = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winhttp.h"
-        $fam = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\winapifamily.h"
-        if (Test-Path $fam) {
-          Select-String -Path $fam -Pattern "WINAPI_FAMILY_DESKTOP_APP|WINAPI_PARTITION_APP|WINAPI_PARTITION_DESKTOP" | ForEach-Object { Write-Host "$($_.LineNumber): $($_.Line.Trim())" }
-        } else {
-          Write-Host "winapifamily.h not found at expected path"
-          Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\winapifamily*" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
-        }
+        cl /EHsc /nologo /D WIN32 /D _WINDOWS /D _WINHTTPX_ /D _WIN32_WINNT=0x0600 /c /TP /Fo:NUL /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um" /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared" /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt" test_winhttp.cpp 2>&1
+      shell: cmd
 
-    - name: Test preprocessor
+    - name: Write test file
       run: |
-        $test = @"
+        @"
         #define WIN32_LEAN_AND_MEAN
         #define _WIN32_WINNT 0x0600
         #include <sdkddkver.h>
+        #include <windows.h>
         #include <winhttp.h>
-        INTERNET_PORT x = 0;
+        INTERNET_PORT x = INTERNET_DEFAULT_HTTP_PORT;
         int main() { return 0; }
         "@
-        $test | Out-File -FilePath "test_winhttp.cpp" -Encoding ASCII
-        cl /EHsc /Zi /D _WINHTTPX_ test_winhttp.cpp /link winhttp.lib 2>&1 | Write-Host
+        Out-File -FilePath "test_winhttp2.cpp" -Encoding ASCII
+      shell: pwsh
+
+    - name: Test WinHTTP compile v2
+      run: |
+        cl /EHsc test_winhttp2.cpp /link winhttp.lib 2>&1
+      shell: cmd
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
