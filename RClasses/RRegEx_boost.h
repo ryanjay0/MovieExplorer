@@ -8,7 +8,15 @@
 #pragma push_macro("new")
 #undef new
 
+#if _MSVC_LANG >= 201703L
+#define _HAS_AUTO_PTR_ETC 1
+#endif
+
 #include <boost/regex.hpp>
+
+#if _MSVC_LANG >= 201703L
+#undef _HAS_AUTO_PTR_ETC
+#endif
 
 class RRegEx
 {
