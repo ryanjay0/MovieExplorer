@@ -24,18 +24,38 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Test with exact MSBuild defines
+    - name: Test A - no extra defines
       shell: cmd
       run: |
-        echo #define _WIN32_WINNT 0x0600 > test2.cpp
-        echo #include ^<sdkddkver.h^> >> test2.cpp
-        echo #define WIN32_LEAN_AND_MEAN >> test2.cpp
-        echo #define _CRT_SECURE_NO_WARNINGS >> test2.cpp
-        echo #include ^<windows.h^> >> test2.cpp
-        echo #include ^<wininet.h^> >> test2.cpp
-        echo #include ^<winhttp.h^> >> test2.cpp
-        echo INTERNET_PORT x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> test2.cpp
-        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE test2.cpp /link winhttp.lib
+        echo #define _WIN32_WINNT 0x0600 > testA.cpp
+        echo #include ^<sdkddkver.h^> >> testA.cpp
+        echo #include ^<windows.h^> >> testA.cpp
+        echo #include ^<winhttp.h^> >> testA.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testA.cpp
+        cl /EHsc testA.cpp /link winhttp.lib
+      continue-on-error: true
+
+    - name: Test B - with _UNICODE UNICODE
+      shell: cmd
+      run: |
+        echo #define _WIN32_WINNT 0x0600 > testB.cpp
+        echo #include ^<sdkddkver.h^> >> testB.cpp
+        echo #include ^<windows.h^> >> testB.cpp
+        echo #include ^<winhttp.h^> >> testB.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testB.cpp
+        cl /EHsc /D_UNICODE /DUNICODE testB.cpp /link winhttp.lib
+      continue-on-error: true
+
+    - name: Test C - with _DEBUG _WINDOWS
+      shell: cmd
+      run: |
+        echo #define _WIN32_WINNT 0x0600 > testC.cpp
+        echo #include ^<sdkddkver.h^> >> testC.cpp
+        echo #include ^<windows.h^> >> testC.cpp
+        echo #include ^<winhttp.h^> >> testC.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testC.cpp
+        cl /EHsc /D_DEBUG /D_WINDOWS testC.cpp /link winhttp.lib
+      continue-on-error: true
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
