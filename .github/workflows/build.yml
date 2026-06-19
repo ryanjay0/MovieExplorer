@@ -24,16 +24,18 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Test WinHTTP compile
+    - name: Test with exact MSBuild defines
       shell: cmd
       run: |
-        echo #define WIN32_LEAN_AND_MEAN > test_wh.cpp
-        echo #define _WIN32_WINNT 0x0600 >> test_wh.cpp
-        echo #include ^<sdkddkver.h^> >> test_wh.cpp
-        echo #include ^<windows.h^> >> test_wh.cpp
-        echo #include ^<winhttp.h^> >> test_wh.cpp
-        echo INTERNET_PORT x = INTERNET_DEFAULT_HTTP_PORT; int main() { HINTERNET h = WinHttpOpen(L"",0,0,0,0); return 0; } >> test_wh.cpp
-        cl /EHsc test_wh.cpp /link winhttp.lib
+        echo #define _WIN32_WINNT 0x0600 > test2.cpp
+        echo #include ^<sdkddkver.h^> >> test2.cpp
+        echo #define WIN32_LEAN_AND_MEAN >> test2.cpp
+        echo #define _CRT_SECURE_NO_WARNINGS >> test2.cpp
+        echo #include ^<windows.h^> >> test2.cpp
+        echo #include ^<wininet.h^> >> test2.cpp
+        echo #include ^<winhttp.h^> >> test2.cpp
+        echo INTERNET_PORT x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> test2.cpp
+        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE test2.cpp /link winhttp.lib
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
