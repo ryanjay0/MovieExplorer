@@ -5,18 +5,7 @@
 #define REGEX_CASEINSENSITIVE		2
 #define REGEX_PRESEARCH				4
 
-#pragma push_macro("new")
-#undef new
-
-#if _MSVC_LANG >= 201703L
-#define _HAS_AUTO_PTR_ETC 1
-#endif
-
-#include <boost/regex.hpp>
-
-#if _MSVC_LANG >= 201703L
-#undef _HAS_AUTO_PTR_ETC
-#endif
+#include <regex>
 
 class RRegEx
 {
@@ -42,9 +31,19 @@ public:
 	{
 		Destroy();
 
-		return m_regex.set_expression(lpszPatternStart, lpszPatternEnd, boost::regex_constants::no_empty_expressions|
-				(options & REGEX_MULTILINE ? 0 : boost::regex_constants::match_not_dot_newline)|
-				(options & REGEX_CASEINSENSITIVE ? boost::regex_constants::icase : 0)) == 0;
+		try
+		{
+			auto flags = std::regex::ECMAScript;
+			if (options & REGEX_CASEINSENSITIVE)
+				flags |= std::regex::icase;
+
+			m_regex = std::basic_regex<TCHAR>(lpszPatternStart, lpszPatternEnd, flags);
+			return true;
+		}
+		catch (const std::regex_error&)
+		{
+			return false;
+		}
 	}
 
 	bool Create(const TCHAR *lpszPattern, INT_PTR options = REGEX_MULTILINE|REGEX_CASEINSENSITIVE|REGEX_PRESEARCH)
@@ -55,31 +54,34 @@ public:
 
 	void Destroy()
 	{
-		m_regex.~basic_regex();
-		new (&m_regex) boost::basic_regex<TCHAR>;
-		m_results.~match_results();
-		new (&m_results) boost::match_results<const TCHAR*>;
+		m_regex = std::basic_regex<TCHAR>();
+		m_results = std::match_results<const TCHAR*>();
 	}
 
 	bool Search(const TCHAR *lpszTextStart, const TCHAR *lpszTextEnd, const TCHAR **ppszMatchStart = NULL, 
 				const TCHAR **ppszMatchEnd = NULL)
 	{
-		if (m_regex.empty())
+		if (m_regex.mark_count() == 0)
 			{ASSERT(false); return false;}
 
-		m_results.~match_results();
-		new (&m_results) boost::match_results<const TCHAR*>;
+		m_results = std::match_results<const TCHAR*>();
 
-		if (boost::regex_search(lpszTextStart, lpszTextEnd, m_results, m_regex))
+		try
 		{
-			if (ppszMatchStart)
-				*ppszMatchStart = m_results[0].first;
-			if (ppszMatchEnd)
-				*ppszMatchEnd = m_results[0].second;
-			return true;
+			auto flags = std::regex_constants::match_default;
+			if (!std::regex_search(lpszTextStart, lpszTextEnd, m_results, m_regex, flags))
+				return false;
+		}
+		catch (const std::regex_error&)
+		{
+			return false;
 		}
 
-		return false;
+		if (ppszMatchStart)
+			*ppszMatchStart = m_results[0].first;
+		if (ppszMatchEnd)
+			*ppszMatchEnd = m_results[0].second;
+		return true;
 	}
 
 	bool Search(const TCHAR *lpszText, const TCHAR **ppszMatchStart = NULL, const TCHAR **ppszMatchEnd = NULL)
@@ -99,13 +101,6 @@ public:
 		}
 		return false;
 	}
-
-	//RString Search(RString_ strText)
-	//{
-	//	RString str;
-	//	Search(strText, &str);
-	//	return str;
-	//}
 
 	bool GetMatch(INT_PTR nIndex, const TCHAR **ppszStart, const TCHAR **ppszEnd) const
 	{
@@ -154,15 +149,13 @@ public:
 
 	RString Replace(RString_ strText, RString_ strReplaceBy)
 	{
-		typedef std::basic_string<TCHAR, std::char_traits<TCHAR>, std::allocator<TCHAR>> tstring;
-		return regex_replace((tstring)strText, m_regex, (tstring)strReplaceBy).c_str();
+		std::basic_string<TCHAR> result = std::regex_replace((std::basic_string<TCHAR>)strText, m_regex, (std::basic_string<TCHAR>)strReplaceBy);
+		return result.c_str();
 	}
 
 protected:
-	boost::basic_regex<TCHAR> m_regex;
-	boost::match_results<const TCHAR*> m_results;
+	std::basic_regex<TCHAR> m_regex;
+	std::match_results<const TCHAR*> m_results;
 };
-
-#pragma pop_macro("new")
 
 #endif // __RREGEX_H__
