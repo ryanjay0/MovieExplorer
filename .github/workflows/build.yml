@@ -24,29 +24,16 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Test minimal WinHTTP compile
-      run: |
-        cl /EHsc /nologo /D WIN32 /D _WINDOWS /D _WINHTTPX_ /D _WIN32_WINNT=0x0600 /c /TP /Fo:NUL /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um" /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared" /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt" test_winhttp.cpp 2>&1
+    - name: Test WinHTTP compile
       shell: cmd
-
-    - name: Write test file
       run: |
-        @"
-        #define WIN32_LEAN_AND_MEAN
-        #define _WIN32_WINNT 0x0600
-        #include <sdkddkver.h>
-        #include <windows.h>
-        #include <winhttp.h>
-        INTERNET_PORT x = INTERNET_DEFAULT_HTTP_PORT;
-        int main() { return 0; }
-        "@
-        Out-File -FilePath "test_winhttp2.cpp" -Encoding ASCII
-      shell: pwsh
-
-    - name: Test WinHTTP compile v2
-      run: |
-        cl /EHsc test_winhttp2.cpp /link winhttp.lib 2>&1
-      shell: cmd
+        echo #define WIN32_LEAN_AND_MEAN > test_wh.cpp
+        echo #define _WIN32_WINNT 0x0600 >> test_wh.cpp
+        echo #include ^<sdkddkver.h^> >> test_wh.cpp
+        echo #include ^<windows.h^> >> test_wh.cpp
+        echo #include ^<winhttp.h^> >> test_wh.cpp
+        echo INTERNET_PORT x = INTERNET_DEFAULT_HTTP_PORT; int main() { HINTERNET h = WinHttpOpen(L"",0,0,0,0); return 0; } >> test_wh.cpp
+        cl /EHsc test_wh.cpp /link winhttp.lib
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
