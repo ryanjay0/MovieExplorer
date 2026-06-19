@@ -2,7 +2,7 @@
 
 #define APPLICATION_ID _T("MOVIEEXPLORER083")
 
-#define _WIN32_WINNT			0x0501	// target WinXP and higher
+#define _WIN32_WINNT			0x0600	// target Vista and higher
 #include <sdkddkver.h>
 
 #define WIN32_LEAN_AND_MEAN				// exclude rarely used stuff from the Windows headers
