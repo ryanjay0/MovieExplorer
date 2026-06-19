@@ -1,6 +1,5 @@
 #pragma once
 #include <unordered_map>
-#include <mutex>
 
 typedef RArray<BYTE> ARBYTE;
 
@@ -15,7 +14,6 @@ public:
 
 protected:
 	std::unordered_map<std::wstring, ARBYTE> hashtable;
-	std::mutex mtx_;
+	CCriticalSection cs_;
 
 };
-

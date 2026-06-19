@@ -3,7 +3,6 @@
 #include "Resume.h"
 #include <Windows.h>
 #include <lmcons.h>
-#include <thread>
 
 
 struct handle_data {
