@@ -275,6 +275,8 @@ inline bool FileToString(const TCHAR *lpszFilePath, RString &str, DWORD charSet 
 
 #ifdef _WINHTTPX_
 
+#include <winhttp.h>
+
 inline bool URLToData(RString strURL, RArray<BYTE>& data, bool& bUTF8)
 {
 	data.SetSize(0);
