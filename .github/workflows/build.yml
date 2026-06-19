@@ -22,8 +22,6 @@ jobs:
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
-      continue-on-error: true
 
     - name: Build Debug|x64
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /verbosity:normal
-      continue-on-error: true
