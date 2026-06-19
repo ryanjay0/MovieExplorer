@@ -20,6 +20,11 @@ jobs:
       with:
         arch: x86
 
+    - name: Extract Boost headers
+      run: |
+        7z x boost\boost_1_60_0.7z -oboost_extracted -y
+        echo "BOOST_ROOT=$env:GITHUB_WORKSPACE\boost_extracted\boost_1_60_0" >> $env:GITHUB_ENV
+
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
 

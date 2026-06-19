@@ -774,9 +774,9 @@ inline RString GetDirectoryName(RString strName)
 
 inline __int64 FileSize(RString name)
 {
-	__stat64 buf;
+	struct _stat64 buf;
 	if (_wstat64(name, &buf) != 0)
-		return -1; // error, could use errno to find out more
+		return -1;
 
 	return buf.st_size;
 }
