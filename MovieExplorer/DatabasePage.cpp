@@ -53,6 +53,16 @@ void CDatabasePage::ApplyChanges()
 		bRequireUpdate = true;
 	}
 
+	// OMDbAPIKey
+
+	RString strOMDbAPIKey = m_eOMDbAPIKey.GetText();
+	strOMDbAPIKey.Trim();
+	if (strOMDbAPIKey != GETPREFSTR(_T("OMDbAPIKey")))
+	{
+		SETPREFSTR(_T("OMDbAPIKey"), strOMDbAPIKey);
+		bRequireUpdate = true;
+	}
+
 	// Services
 	
 	RString str = m_cbOnlyUse.GetText(m_cbOnlyUse.GetSel());
@@ -162,6 +172,8 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 			!m_chkIndexDirectories.Create<RButton>(m_hWnd, BS_AUTOCHECKBOX|WS_TABSTOP) ||
 			!m_eMaxInfoAge.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP|ES_NUMBER, WS_EX_CLIENTEDGE) ||
 			!m_stcMaxInfoAge.Create<RStatic>(m_hWnd) ||
+			!m_eOMDbAPIKey.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP, WS_EX_CLIENTEDGE) ||
+			!m_stcOMDbAPIKey.Create<RStatic>(m_hWnd) ||
 			!m_grpDatabase.Create<RButton>(m_hWnd, BS_GROUPBOX) ||
 
 			!m_cbOnlyUse.Create<RComboBox>(m_hWnd, cbStyle) ||
@@ -202,6 +214,8 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 	m_chkIndexDirectories.SetCheck(GETPREFBOOL(_T("Database"), _T("IndexDirectories")));
 
 	m_eMaxInfoAge.SetText(GETPREFSTR(_T("Database"), _T("MaxInfoAge")));
+
+	m_eOMDbAPIKey.SetText(GETPREFSTR(_T("OMDbAPIKey")));
 
 
 	// Populate services combo boxes
@@ -285,7 +299,7 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	UNREFERENCED_PARAMETER(type);
 	UNREFERENCED_PARAMETER(cy);
 	int y = DUY(4);
-	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(70));
+	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(86));
 	y += DUY(12);
 	MoveWindow(m_stcIndexExtensions, DUX(14), y, DUX(200), DUY(10));
 	y += DUY(11);
@@ -295,8 +309,11 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	y += DUY(16);
 	MoveStatic(m_stcMaxInfoAge, DUX(14), y+DUY(2));
 	MoveWindow(m_eMaxInfoAge, DUX(14) + m_stcMaxInfoAge.GetWidth() + DUX(4), y, DUX(30), DUY(12));
+	y += DUY(16);
+	MoveStatic(m_stcOMDbAPIKey, DUX(14), y+DUY(2));
+	MoveWindow(m_eOMDbAPIKey, DUX(14) + m_stcOMDbAPIKey.GetWidth() + DUX(4), y, cx - DUX(28) - m_stcOMDbAPIKey.GetWidth() - DUX(4), DUY(12));
 
-	y = DUY(78);
+	y = DUY(96);
 	MoveWindow(m_grpInfoService, DUX(4), y, cx - DUX(8), DUY(112));
 	y += DUY(12);
 	MoveWindow(m_stcOnlyUse, DUX(14), y+DUY(1)+1, DUX(60), DUY(10));
@@ -341,6 +358,7 @@ void CDatabasePage::OnPrefChanged()
 	m_stcIndexExtensions.SetText(GETSTR(IDS_INDEXEXTENSIONS) + _T(":"));
 	m_chkIndexDirectories.SetText(_T(" ") + GETSTR(IDS_INDEXDIRECTORIES));
 	m_stcMaxInfoAge.SetText(GETSTR(IDS_MAXINFOAGE) + _T(":"));
+	m_stcOMDbAPIKey.SetText(_T("OMDb API Key:"));
 	m_grpDatabase.SetText(GETSTR(IDS_DATABASE));
 
 	m_stcOnlyUse.SetText(GETSTR(IDS_ONLYUSE) + _T(":"));

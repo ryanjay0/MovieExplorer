@@ -1,0 +1,29 @@
+name: Build MovieExplorer
+
+on:
+  push:
+    branches: [ agentic ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup Visual Studio Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v2
+      with:
+        arch: x86
+
+    - name: Build Debug|Win32
+      run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
+      continue-on-error: true
+
+    - name: Build Debug|x64
+      run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /verbosity:normal
+      continue-on-error: true

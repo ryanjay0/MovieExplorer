@@ -990,6 +990,11 @@ void CListView::Draw()
 							MakeLink(_T(""), _T("http://www.imdb.com/name/") + mov.strActorId[i], nX, cxImg, nY, cyImg, pt);
 						nX += SCX(32);
 					}
+					else
+					{
+						DrawRoundedRect(m_mdc, nX, nY, SCX(32), SCY(44), SCX(3), m_clrShadow, 40);
+						nX += SCX(32);
+					}
 				
 					RString strStar = _T(" ") + strThisStar;
 					if (i + 1 < DBI_STAR_NUMBER && !GetStar(mov.strStars, i + 1).IsEmpty())
