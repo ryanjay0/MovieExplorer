@@ -14,6 +14,6 @@ public:
 
 protected:
 	std::unordered_map<std::wstring, ARBYTE> hashtable;
-	CCriticalSection cs_;
+	RCriticalSection cs_;
 
 };

@@ -4,7 +4,7 @@
 bool CorrectThemes()
 {
 #ifdef _DEBUG
-	RemoveDirectory(CorrectPath(_T("Themes")), true);
+	RemoveDirectory(CorrectPath(_T("Themes")));
 #endif
 
 	// Create themes folder if it does not exist
