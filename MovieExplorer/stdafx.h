@@ -29,6 +29,23 @@
 #include <wininet.h>
 #include <winhttp.h>
 
+#if _MSVC_LANG >= 201703L
+#include <functional>
+namespace std {
+template<class _Arg, class _Result>
+struct unary_function {
+    typedef _Arg argument_type;
+    typedef _Result result_type;
+};
+template<class _Arg1, class _Arg2, class _Result>
+struct binary_function {
+    typedef _Arg1 first_argument_type;
+    typedef _Arg2 second_argument_type;
+    typedef _Result result_type;
+};
+}
+#endif
+
 // DynamicDll
 
 #include "..\DynamicDll\User32Dll.h"
@@ -80,19 +97,3 @@
 #include "..\RClasses\RRegEx_boost.h"
 #include "..\RClasses\RTreeView.h"
 #include "..\RClasses\RCustomToolBar.h"
-
-#if _MSVC_LANG >= 201703L
-namespace std {
-template<class _Arg, class _Result>
-struct unary_function {
-    typedef _Arg argument_type;
-    typedef _Result result_type;
-};
-template<class _Arg1, class _Arg2, class _Result>
-struct binary_function {
-    typedef _Arg1 first_argument_type;
-    typedef _Arg2 second_argument_type;
-    typedef _Result result_type;
-};
-}
-#endif
