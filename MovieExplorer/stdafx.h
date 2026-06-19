@@ -26,6 +26,7 @@
 #include <process.h>
 #include <shlobj.h>
 #include <shellapi.h>
+#include <wininet.h>
 #include <winhttp.h>
 
 // DynamicDll
