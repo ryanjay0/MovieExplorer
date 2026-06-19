@@ -23,7 +23,14 @@ jobs:
     - name: Extract Boost headers
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
-        echo "BOOST_ROOT=$env:GITHUB_WORKSPACE\boost_extracted\boost_1_60_0" >> $env:GITHUB_ENV
+
+    - name: Diagnose WinHTTP
+      run: |
+        Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\Include\*\um\winhttp.h" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+        $sdkDir = "C:\Program Files (x86)\Windows Kits\10\Include"
+        if (Test-Path $sdkDir) {
+          Get-ChildItem $sdkDir | ForEach-Object { Write-Host "SDK: $($_.Name)" }
+        }
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
