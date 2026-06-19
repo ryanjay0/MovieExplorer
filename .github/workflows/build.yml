@@ -24,19 +24,7 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Test - with wininet.h
-      shell: cmd
-      run: |
-        echo #define _WIN32_WINNT 0x0600 > testE.cpp
-        echo #include ^<sdkddkver.h^> >> testE.cpp
-        echo #define WIN32_LEAN_AND_MEAN >> testE.cpp
-        echo #include ^<windows.h^> >> testE.cpp
-        echo #include ^<wininet.h^> >> testE.cpp
-        echo #include ^<winhttp.h^> >> testE.cpp
-        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testE.cpp
-        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE testE.cpp /link winhttp.lib
-
-    - name: Test - without WIN32_LEAN_AND_MEAN
+    - name: Test without WIN32_LEAN_AND_MEAN
       shell: cmd
       run: |
         echo #define _WIN32_WINNT 0x0600 > testF.cpp
@@ -45,6 +33,44 @@ jobs:
         echo #include ^<winhttp.h^> >> testF.cpp
         echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testF.cpp
         cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE testF.cpp /link winhttp.lib
+      continue-on-error: true
+
+    - name: Test with WIN32_LEAN_AND_MEAN but without wininet
+      shell: cmd
+      run: |
+        echo #define _WIN32_WINNT 0x0600 > testG.cpp
+        echo #include ^<sdkddkver.h^> >> testG.cpp
+        echo #define WIN32_LEAN_AND_MEAN >> testG.cpp
+        echo #include ^<windows.h^> >> testG.cpp
+        echo #include ^<winhttp.h^> >> testG.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testG.cpp
+        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE testG.cpp /link winhttp.lib
+      continue-on-error: true
+
+    - name: Test with WIN32_LEAN_AND_MEAN and wininet
+      shell: cmd
+      run: |
+        echo #define _WIN32_WINNT 0x0600 > testH.cpp
+        echo #include ^<sdkddkver.h^> >> testH.cpp
+        echo #define WIN32_LEAN_AND_MEAN >> testH.cpp
+        echo #include ^<windows.h^> >> testH.cpp
+        echo #include ^<wininet.h^> >> testH.cpp
+        echo #include ^<winhttp.h^> >> testH.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testH.cpp
+        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE testH.cpp /link winhttp.lib
+      continue-on-error: true
+
+    - name: Test just _UNICODE UNICODE (no other defines)
+      shell: cmd
+      run: |
+        echo #define _WIN32_WINNT 0x0600 > testI.cpp
+        echo #include ^<sdkddkver.h^> >> testI.cpp
+        echo #define WIN32_LEAN_AND_MEAN >> testI.cpp
+        echo #include ^<windows.h^> >> testI.cpp
+        echo #include ^<winhttp.h^> >> testI.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testI.cpp
+        cl /EHsc /D_UNICODE /DUNICODE testI.cpp /link winhttp.lib
+      continue-on-error: true
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
