@@ -2,6 +2,11 @@
 
 #define APPLICATION_ID _T("MOVIEEXPLORER083")
 
+#ifndef WINAPI_FAMILY_DESKTOP_APP
+#define WINAPI_FAMILY_DESKTOP_APP 100
+#endif
+#define WINAPI_FAMILY WINAPI_FAMILY_DESKTOP_APP
+
 #define _WIN32_WINNT			0x0600	// target Vista and higher
 #include <sdkddkver.h>
 
