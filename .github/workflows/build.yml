@@ -24,13 +24,10 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Diagnose WinHTTP
+    - name: Check winhttp.h guards
       run: |
-        Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\Include\*\um\winhttp.h" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
-        $sdkDir = "C:\Program Files (x86)\Windows Kits\10\Include"
-        if (Test-Path $sdkDir) {
-          Get-ChildItem $sdkDir | ForEach-Object { Write-Host "SDK: $($_.Name)" }
-        }
+        $h = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winhttp.h"
+        Select-String -Path $h -Pattern "WINAPI_FAMILY|WINHTTP_ACCESS_TYPE_DEFAULT_PROXY|_WIN32_WINNT" | Select-Object -First 20 | ForEach-Object { Write-Host $_.LineNumber $_.Line }
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
