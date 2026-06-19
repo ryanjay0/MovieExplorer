@@ -24,16 +24,27 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Test D - all defines but no wininet.h
+    - name: Test - with wininet.h
       shell: cmd
       run: |
-        echo #define _WIN32_WINNT 0x0600 > testD.cpp
-        echo #include ^<sdkddkver.h^> >> testD.cpp
-        echo #define WIN32_LEAN_AND_MEAN >> testD.cpp
-        echo #include ^<windows.h^> >> testD.cpp
-        echo #include ^<winhttp.h^> >> testD.cpp
-        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testD.cpp
-        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE testD.cpp /link winhttp.lib
+        echo #define _WIN32_WINNT 0x0600 > testE.cpp
+        echo #include ^<sdkddkver.h^> >> testE.cpp
+        echo #define WIN32_LEAN_AND_MEAN >> testE.cpp
+        echo #include ^<windows.h^> >> testE.cpp
+        echo #include ^<wininet.h^> >> testE.cpp
+        echo #include ^<winhttp.h^> >> testE.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testE.cpp
+        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE testE.cpp /link winhttp.lib
+
+    - name: Test - without WIN32_LEAN_AND_MEAN
+      shell: cmd
+      run: |
+        echo #define _WIN32_WINNT 0x0600 > testF.cpp
+        echo #include ^<sdkddkver.h^> >> testF.cpp
+        echo #include ^<windows.h^> >> testF.cpp
+        echo #include ^<winhttp.h^> >> testF.cpp
+        echo int x = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY; int main(){return 0;} >> testF.cpp
+        cl /EHsc /DWIN32 /D_DEBUG /D_WINDOWS /D_WINHTTPX_ /D_UNICODE /DUNICODE testF.cpp /link winhttp.lib
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
