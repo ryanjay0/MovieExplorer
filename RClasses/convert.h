@@ -273,7 +273,7 @@ inline bool FileToString(const TCHAR *lpszFilePath, RString &str, DWORD charSet 
 	return true;
 }
 
-#ifdef _WINHTTPX_
+#ifdef _USE_WINHTTP_
 
 #include <winhttp.h>
 
@@ -399,4 +399,4 @@ inline bool URLToString(const TCHAR* lpszURL, RString& str)
 inline RString URLToString(const TCHAR* lpszURL)
 	{RString str; URLToString(lpszURL, str); return str;}
 
-#endif // _WINHTTPX_
+#endif // _USE_WINHTTP_
