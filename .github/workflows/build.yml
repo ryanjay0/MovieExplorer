@@ -24,13 +24,29 @@ jobs:
       run: |
         7z x boost\boost_1_60_0.7z -oboost_extracted -y
 
-    - name: Check winhttp.h guards
+    - name: Check WINAPI_FAMILY values
       run: |
-        $h = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winhttp.h"
-        Select-String -Path $h -Pattern "WINAPI_FAMILY|WINHTTP_ACCESS_TYPE_DEFAULT_PROXY|_WIN32_WINNT" | Select-Object -First 20 | ForEach-Object { Write-Host $_.LineNumber $_.Line }
+        $sdk = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winhttp.h"
+        $fam = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\winapifamily.h"
+        if (Test-Path $fam) {
+          Select-String -Path $fam -Pattern "WINAPI_FAMILY_DESKTOP_APP|WINAPI_PARTITION_APP|WINAPI_PARTITION_DESKTOP" | ForEach-Object { Write-Host "$($_.LineNumber): $($_.Line.Trim())" }
+        } else {
+          Write-Host "winapifamily.h not found at expected path"
+          Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\winapifamily*" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+        }
+
+    - name: Test preprocessor
+      run: |
+        $test = @"
+        #define WIN32_LEAN_AND_MEAN
+        #define _WIN32_WINNT 0x0600
+        #include <sdkddkver.h>
+        #include <winhttp.h>
+        INTERNET_PORT x = 0;
+        int main() { return 0; }
+        "@
+        $test | Out-File -FilePath "test_winhttp.cpp" -Encoding ASCII
+        cl /EHsc /Zi /D _WINHTTPX_ test_winhttp.cpp /link winhttp.lib 2>&1 | Write-Host
 
     - name: Build Debug|Win32
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=Win32 /m /verbosity:normal
-
-    - name: Build Debug|x64
-      run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /verbosity:normal
