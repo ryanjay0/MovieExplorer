@@ -36,3 +36,15 @@ jobs:
 
     - name: Build Release|x64
       run: msbuild MovieExplorer\VS2015\MovieExplorer.vcxproj /p:Configuration=Release /p:Platform=x64 /m /verbosity:normal
+
+    - name: Upload Release Win32 exe
+      uses: actions/upload-artifact@v4
+      with:
+        name: MovieExplorer-Release-Win32
+        path: MovieExplorer\VS2015\Release\MovieExplorer.exe
+
+    - name: Upload Release x64 exe
+      uses: actions/upload-artifact@v4
+      with:
+        name: MovieExplorer-Release-x64
+        path: MovieExplorer\VS2015\x64\Release\MovieExplorer.exe
