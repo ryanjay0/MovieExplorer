@@ -40,6 +40,147 @@ static bool OMDbIsResponseTrue(RXMLFile2 &xmlFile)
 	return _tcsicmp(strResponse, _T("true")) == 0;
 }
 
+static RString OMDbBuildSearchURL(RString strAPIKey, RString strTitle, RString strYear, BYTE bType)
+{
+	RString strURL = _T("https://www.omdbapi.com/?apikey=") + strAPIKey +
+		_T("&s=") + URLEncode(strTitle) +
+		_T("&r=xml");
+
+	if (!strYear.IsEmpty() && bType != DB_TYPE_TV)
+		strURL += _T("&y=") + strYear;
+
+	if (bType == DB_TYPE_TV)
+		strURL += _T("&type=series");
+	else if (bType == DB_TYPE_MOVIE)
+		strURL += _T("&type=movie");
+
+	return strURL;
+}
+
+static bool OMDbPickBestResult(RXMLFile2 &xmlFile, RString strSearchTitle, RString strSearchYear, BYTE bType, RString &strBestID)
+{
+	const RXMLElem2 &root = xmlFile.GetRootElem();
+	const RArray<RXMLElem2*> &children = root.GetChildren();
+
+	strBestID.Empty();
+	INT_PTR nBestMatchScore = -1;
+
+	for (INT_PTR i = 0; i < children.GetSize(); ++i)
+	{
+		if (children[i]->GetName() != _T("result"))
+			continue;
+
+		RString strResultTitle = children[i]->GetAttribute(_T("title"));
+		RString strResultYear = children[i]->GetAttribute(_T("year"));
+		RString strResultID = children[i]->GetAttribute(_T("imdbID"));
+		RString strResultType = children[i]->GetAttribute(_T("type"));
+
+		INT_PTR nScore = 0;
+
+		if (_tcsicmp(strResultTitle, strSearchTitle) == 0)
+			nScore += 100;
+		else if (strResultTitle.FindNoCase(strSearchTitle) >= 0)
+			nScore += 50;
+
+		if (!strSearchYear.IsEmpty() && strResultYear == strSearchYear)
+			nScore += 30;
+
+		if (bType == DB_TYPE_TV && _tcsicmp(strResultType, _T("series")) == 0)
+			nScore += 20;
+		else if (bType == DB_TYPE_MOVIE && _tcsicmp(strResultType, _T("movie")) == 0)
+			nScore += 20;
+
+		if (nScore > nBestMatchScore)
+		{
+			nBestMatchScore = nScore;
+			strBestID = strResultID;
+		}
+	}
+
+	return !strBestID.IsEmpty();
+}
+
+static bool OMDbSearch(RString strAPIKey, RString strTitle, RString strYear, BYTE bType, RString &strBestID)
+{
+	RString strURL = OMDbBuildSearchURL(strAPIKey, strTitle, strYear, bType);
+
+	RXMLFile2 xmlFile;
+	if (!OMDbRequest(strURL, xmlFile))
+		return false;
+
+	if (!OMDbIsResponseTrue(xmlFile))
+		return false;
+
+	return OMDbPickBestResult(xmlFile, strTitle, strYear, bType, strBestID);
+}
+
+static RString TryApostropheVariants(RString strTitle)
+{
+	static const RString strPrefixes[] = {
+		_T("Im "), _T("Ill "), _T("Ive "), _T("Id "), _T("Were "),
+		_T("Theyre "), _T("Thats "), _T("Hes "), _T("Shes "), _T("Whos "),
+		_T("Whats "), _T("Heres "), _T("Theres "), _T("Wheres "),
+		_T("Cant "), _T("Wont "), _T("Dont "), _T("Isnt "), _T("Didnt "),
+		_T("Wouldnt "), _T("Couldnt "), _T("Shouldnt "), _T("Hasnt "),
+		_T("Havent "), _T("Hadnt "), _T("Wasnt "), _T("Werent "),
+		_T("Arent "), _T("Doesnt ")
+	};
+
+	static const RString strPrefixReplacements[] = {
+		_T("I'm "), _T("I'll "), _T("I've "), _T("I'd "), _T("We're "),
+		_T("They're "), _T("That's "), _T("He's "), _T("She's "), _T("Who's "),
+		_T("What's "), _T("Here's "), _T("There's "), _T("Where's "),
+		_T("Can't "), _T("Won't "), _T("Don't "), _T("Isn't "), _T("Didn't "),
+		_T("Wouldn't "), _T("Couldn't "), _T("Shouldn't "), _T("Hasn't "),
+		_T("Haven't "), _T("Hadn't "), _T("Wasn't "), _T("Weren't "),
+		_T("Aren't "), _T("Doesn't ")
+	};
+
+	for (INT_PTR i = 0; i < sizeof(strPrefixes)/sizeof(strPrefixes[0]); ++i)
+	{
+		if (strTitle.FindNoCase(strPrefixes[i]) == 0)
+		{
+			RString strRest = strTitle.Mid(strPrefixes[i].GetLength());
+			return strPrefixReplacements[i] + strRest;
+		}
+	}
+
+	RString strResult = strTitle;
+
+	for (INT_PTR pos = 0; pos < (INT_PTR)strResult.GetLength() - 1; ++pos)
+	{
+		INT_PTR next = pos + 1;
+		if ((strResult[pos] == _T('s') || strResult[pos] == _T('S')) &&
+			(strResult[next] == _T(' ') || next == strResult.GetLength() - 1) &&
+			pos > 0 && strResult[pos - 1] != _T(' '))
+		{
+			strResult = strResult.Left(pos) + _T("'") + strResult.Mid(pos);
+			break;
+		}
+	}
+
+	return strResult;
+}
+
+static RString TryStripCountrySuffix(RString strTitle)
+{
+	static const RString strSuffixes[] = {
+		_T(" US"), _T(" UK"), _T(" AU"), _T(" CA"), _T(" NZ")
+	};
+
+	for (INT_PTR i = 0; i < sizeof(strSuffixes)/sizeof(strSuffixes[0]); ++i)
+	{
+		INT_PTR len = strSuffixes[i].GetLength();
+		if (strTitle.GetLength() > len &&
+			_tcsicmp(strTitle.Right(len), strSuffixes[i]) == 0)
+		{
+			return strTitle.Left(strTitle.GetLength() - len);
+		}
+	}
+
+	return strTitle;
+}
+
 DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 {
 	if (!pInfo || pInfo->strSearchTitle.IsEmpty() || pInfo->strServiceName != _T("imdb.com"))
@@ -52,64 +193,44 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 
 	if (pInfo->strID.IsEmpty())
 	{
-		RString strURL = _T("https://www.omdbapi.com/?apikey=") + strOMDbAPIKey +
-			_T("&s=") + URLEncode(pInfo->strSearchTitle) +
-			_T("&r=xml");
-
-		if (!pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
-			strURL += _T("&y=") + pInfo->strSearchYear;
-
-		if (pInfo->bType == DB_TYPE_TV)
-			strURL += _T("&type=series");
-		else if (pInfo->bType == DB_TYPE_MOVIE)
-			strURL += _T("&type=movie");
-
-		RXMLFile2 xmlFile;
-		if (!OMDbRequest(strURL, xmlFile))
-			return DBI_STATUS_CONNERROR;
-
-		if (!OMDbIsResponseTrue(xmlFile))
-			return DBI_STATUS_UNKNOWN;
-
-		const RXMLElem2 &root = xmlFile.GetRootElem();
-		const RArray<RXMLElem2*> &children = root.GetChildren();
-
 		RString strBestID;
-		INT_PTR nBestMatchScore = -1;
 
-		for (INT_PTR i = 0; i < children.GetSize(); ++i)
+		// Attempt 1: search with title + year
+
+		bool bFound = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, pInfo->strSearchYear, pInfo->bType, strBestID);
+
+		// Attempt 2: retry without year (year in filename may not match OMDb)
+
+		if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
+			bFound = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, RString(), pInfo->bType, strBestID);
+
+		// Attempt 3: retry with apostrophe variants (filenames often strip apostrophes)
+
+		if (!bFound)
 		{
-			if (children[i]->GetName() != _T("result"))
-				continue;
+			RString strApostrophe = TryApostropheVariants(pInfo->strSearchTitle);
+			if (strApostrophe != pInfo->strSearchTitle)
+				bFound = OMDbSearch(strOMDbAPIKey, strApostrophe, pInfo->strSearchYear, pInfo->bType, strBestID);
 
-			RString strResultTitle = children[i]->GetAttribute(_T("title"));
-			RString strResultYear = children[i]->GetAttribute(_T("year"));
-			RString strResultID = children[i]->GetAttribute(_T("imdbID"));
-			RString strResultType = children[i]->GetAttribute(_T("type"));
+			if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
+				bFound = OMDbSearch(strOMDbAPIKey, strApostrophe, RString(), pInfo->bType, strBestID);
+		}
 
-			INT_PTR nScore = 0;
+		// Attempt 4: retry without country suffix (e.g. "Love Island US" -> "Love Island")
 
-			if (_tcsicmp(strResultTitle, pInfo->strSearchTitle) == 0)
-				nScore += 100;
-			else if (strResultTitle.FindNoCase(pInfo->strSearchTitle) >= 0)
-				nScore += 50;
-
-			if (!pInfo->strSearchYear.IsEmpty() && strResultYear == pInfo->strSearchYear)
-				nScore += 30;
-
-			if (pInfo->bType == DB_TYPE_TV && _tcsicmp(strResultType, _T("series")) == 0)
-				nScore += 20;
-			else if (pInfo->bType == DB_TYPE_MOVIE && _tcsicmp(strResultType, _T("movie")) == 0)
-				nScore += 20;
-
-			if (nScore > nBestMatchScore)
+		if (!bFound && pInfo->bType == DB_TYPE_TV)
+		{
+			RString strStripped = TryStripCountrySuffix(pInfo->strSearchTitle);
+			if (strStripped != pInfo->strSearchTitle)
 			{
-				nBestMatchScore = nScore;
-				strBestID = strResultID;
+				bFound = OMDbSearch(strOMDbAPIKey, strStripped, pInfo->strSearchYear, pInfo->bType, strBestID);
+
+				if (!bFound && !pInfo->strSearchYear.IsEmpty())
+					bFound = OMDbSearch(strOMDbAPIKey, strStripped, RString(), pInfo->bType, strBestID);
 			}
 		}
 
-		if (strBestID.IsEmpty())
+		if (!bFound)
 			return DBI_STATUS_UNKNOWN;
 
 		pInfo->strID = strBestID;

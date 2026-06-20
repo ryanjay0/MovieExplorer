@@ -175,7 +175,14 @@ void ParseFileName(RString_ strFileName, RString &strTitle, RString &strYear, IN
 	// strip common movie descriptors and everything after
 
 	static const RString strDescriptors[] = { _T("webrip"), _T("dvdrip"), _T("dvdscr"), _T("xvid"), _T("bdrip"),
-		_T("brrip"), _T("hdtv"), _T("pdtv"), _T("box set"), _T("box-set"), _T("x264") };
+		_T("brrip"), _T("hdtv"), _T("pdtv"), _T("box set"), _T("box-set"), _T("x264"), _T("x265"),
+		_T("1080p"), _T("720p"), _T("480p"), _T("2160p"), _T("4k"),
+		_T("hevc"), _T("h264"), _T("h265"), _T("10bit"), _T("8bit"),
+		_T("web dl"), _T("web dl"), _T("webrip"), _T("bluray"), _T("blu ray"),
+		_T("amzn"), _T("nf"), _T("dsnp"), _T("hmax"), _T("dsnp"), _T("pmtp"),
+		_T("ddp"), _T("dd"), _T("atmos"), _T("aac"), _T("flac"),
+		_T("aac2"), _T("aac5"), _T("dd5"), _T("ddp5"), _T("ddp7"),
+		_T("h265"), _T("hez8"), _T("bone"), _T("eztvx"), _T("playweb") };
 	foreach(strDescriptors, strD)
 	{
 		m = strTitle.FindNoCase(strD, 0);
