@@ -252,7 +252,10 @@ static RString TryStripPart(RString strTitle)
 			for (INT_PTR i = 0; i < strAfterPart.GetLength(); ++i)
 			{
 				if (strAfterPart[i] >= _T('0') && strAfterPart[i] <= _T('9'))
-					strNum += strAfterPart[i];
+				{
+					TCHAR sz[2] = { strAfterPart[i], 0 };
+					strNum += sz;
+				}
 				else
 					break;
 			}
