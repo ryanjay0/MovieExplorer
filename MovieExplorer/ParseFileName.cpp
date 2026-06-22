@@ -58,7 +58,25 @@ void ParseFileName(RString_ strFileName, RString &strTitle, RString &strYear, IN
 
 	strTitle.Replace(_T('.'), _T(' '));
 	strTitle.Replace(_T('_'), _T(' '));
-	strTitle.Replace(_T('-'), _T(' '));
+
+	{
+		RString strResult;
+		for (INT_PTR i = 0; i < strTitle.GetLength(); ++i)
+		{
+			if (strTitle[i] == _T('-'))
+			{
+				bool bLeftSpace = (i == 0 || strTitle[i - 1] == _T(' '));
+				bool bRightSpace = (i + 1 >= strTitle.GetLength() || strTitle[i + 1] == _T(' '));
+				if (bLeftSpace || bRightSpace)
+					strResult += _T(' ');
+				else
+					strResult += _T('-');
+			}
+			else
+				strResult += strTitle[i];
+		}
+		strTitle = strResult;
+	}
 
 	// remove redundant space
 
@@ -182,7 +200,10 @@ void ParseFileName(RString_ strFileName, RString &strTitle, RString &strYear, IN
 		_T("amzn"), _T("nf"), _T("dsnp"), _T("hmax"), _T("dsnp"), _T("pmtp"),
 		_T("ddp"), _T("dd"), _T("atmos"), _T("aac"), _T("flac"),
 		_T("aac2"), _T("aac5"), _T("dd5"), _T("ddp5"), _T("ddp7"),
-		_T("h265"), _T("hez8"), _T("bone"), _T("eztvx"), _T("playweb") };
+		_T("h265"), _T("hez8"), _T("bone"), _T("eztvx"), _T("playweb"),
+		_T("remastered"), _T("extended"), _T("uncut"), _T("unrated"),
+		_T("theatrical"), _T("uncorked"), _T("collector"), _T("special"),
+		_T("shout"), _T("rarbg"), _T("tgx"), _T("yts"), _T("publichd") };
 	foreach(strDescriptors, strD)
 	{
 		m = strTitle.FindNoCase(strD, 0);

@@ -160,8 +160,8 @@ void Run()
 
 	// Update log and status
 
-    LOG(_T("Movie Explorer - version 0.84a\n"));
-    LOG(_T("built May 2, 2014\n"));
+    LOG(_T("Movie Explorer - version 1.0\n"));
+    LOG(_T("built " _T(__DATE__) _T("\n")));
 	STATUS(_T("Ready"));
 
 	SendMessage(mainWnd, WM_PAINT);

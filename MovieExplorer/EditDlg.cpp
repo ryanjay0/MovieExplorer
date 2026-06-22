@@ -109,7 +109,7 @@ void CEditDlg::OnOK()
 		m_pMov->fRating = m_pMov->fRatingMax = 0.0f;
 		m_pMov->nMetascore = -1;
 		m_pMov->nEpisode = -1; m_pMov->nSeason = -1;
-		m_pMov->strEpisodeName.Empty(); m_pMov->strAirDate.Empty();
+		m_pMov->strEpisodeName.Empty(); m_pMov->strEpisodeID.Empty(); m_pMov->strAirDate.Empty();
 		m_pMov->bType = DB_TYPE_UNKNOWN;
 		m_pMov->nIMDbVotes = m_pMov->nVotes = m_pMov->nRuntime = 0;
 		m_pMov->strTitle.Empty(); m_pMov->strYear.Empty(); m_pMov->strCountries.Empty(); 

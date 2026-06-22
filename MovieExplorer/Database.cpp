@@ -76,6 +76,7 @@ void ClearInfo(DBINFO *pInfo)
 	pInfo->nSeason = -1;
 	pInfo->nEpisode = -1;
 	pInfo->strEpisodeName.Empty();
+	pInfo->strEpisodeID.Empty();
 	pInfo->strAirDate.Empty();
 	pInfo->bType = DB_TYPE_UNKNOWN;
 	pInfo->nVotes = 0;
@@ -124,6 +125,7 @@ void ClearMovie(DBMOVIE *pMovie)
 	pMovie->nSeason = -1;
 	pMovie->nEpisode = -1;
 	pMovie->strEpisodeName.Empty();
+	pMovie->strEpisodeID.Empty();
 	pMovie->strAirDate.Empty();
 	pMovie->bType = DB_TYPE_UNKNOWN;
 	pMovie->nVotes = 0;
@@ -172,6 +174,7 @@ void TagToInfo(RXMLTag *pTag, DBINFO *pInfo)
 	pInfo->nSeason = StringToNumber(pTag->GetChildContent(_T("Season")));
 	pInfo->nEpisode = StringToNumber(pTag->GetChildContent(_T("Episode")));
 	pInfo->strEpisodeName = pTag->GetChildContent(_T("EpisodeName"));
+	pInfo->strEpisodeID = pTag->GetChildContent(_T("EpisodeID"));
 	pInfo->strAirDate = pTag->GetChildContent(_T("AirDate"));
 	pInfo->bType = (BYTE)StringToNumber(pTag->GetChildContent(_T("Type")));
 	for (int i = 0; i < DBI_STAR_NUMBER; i++)
@@ -208,6 +211,7 @@ void InfoToTag(DBINFO *pInfo, RXMLTag *pTag)
 	pTag->AddChild(_T("Episode"))->SetContent(NumberToString(pInfo->nEpisode));
 	pTag->AddChild(_T("Season"))->SetContent(NumberToString(pInfo->nSeason));
 	pTag->AddChild(_T("EpisodeName"))->SetContent(pInfo->strEpisodeName);
+	pTag->AddChild(_T("EpisodeID"))->SetContent(pInfo->strEpisodeID);
 	pTag->AddChild(_T("AirDate"))->SetContent(pInfo->strAirDate);
 	pTag->AddChild(_T("Type"))->SetContent(NumberToString(pInfo->bType));
 	for (int i = 0; i < DBI_STAR_NUMBER; i++)
@@ -430,7 +434,7 @@ bool CDatabase::Load(RString_ strFilePath)
 				// Determine if an update is needed
 
 				if ((pMov->strIMDbID == _T("unknown") || pMov->strIMDbID == _T("connError") || 
-						pMov->strIMDbID == _T("scrapeError")) && 
+						pMov->strIMDbID == _T("scrapeError") || pMov->strIMDbID == _T("rateLimited")) && 
 						(pMov->strMovieMeterID == _T("unknown") || 
 						pMov->strMovieMeterID == _T("connError") || 
 						pMov->strMovieMeterID == _T("scrapeError")))
@@ -747,6 +751,7 @@ void CDatabase::Update()
 	
 	CancelUpdate();
 
+	m_seriesDedup.searchToID.clear();
 	m_updateMovies.SetSize(0);
 	foreach (m_categories, cat)
 		foreach (cat.directories, dir)
@@ -768,6 +773,7 @@ void CDatabase::Update()
 	{
 		UPDATETHREADDATA threadData;
 		threadData.hDatabaseWnd = m_hWnd;
+		threadData.pDedup = &m_seriesDedup;
 		UINT idThread;
 		HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, &threadData, 0, &idThread);
 		ASSERT(hThread);
@@ -785,6 +791,7 @@ void CDatabase::Update(DBMOVIE *pMov)
 	{
 		UPDATETHREADDATA threadData;
 		threadData.hDatabaseWnd = m_hWnd;
+		threadData.pDedup = &m_seriesDedup;
 		UINT idThread;
 		HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, &threadData, 0, &idThread);
 		ASSERT(hThread);

@@ -1,5 +1,7 @@
 #pragma once
 
+struct SeriesDedup;
+
 // NOTE: The ID string of the movie contains the status
 // ""            : movie is being updated
 // "<id>"        : movie is being updated OR is already updated, just check bUpdated
@@ -12,6 +14,7 @@
 #define DBI_STATUS_UNKNOWN		2	// could not find movie in service
 #define DBI_STATUS_CONNERROR	3	// there was a connection error whilst retrieving information
 #define DBI_STATUS_SCRAPEERROR	4
+#define DBI_STATUS_RATELIMITED	5
 
 #define DBI_STAR_NUMBER			3	//number of movie star names 
 
@@ -53,7 +56,7 @@ struct DBDIRECTORY
 struct DBMOVIE
 {
 	RString strFileName, strIMDbID, strMovieMeterID, strTitle, strYear, strCountries, strGenres, strContentRating,
-			strStoryline, strDirectors, strWriters, strStars, strEpisodeName, strAirDate;
+			strStoryline, strDirectors, strWriters, strStars, strEpisodeName, strEpisodeID, strAirDate;
 	float fRating, fRatingMax, fIMDbRating, fIMDbRatingMax;
 	INT_PTR nVotes, nIMDbVotes, nYear, nMetascore, nSeason, nEpisode, nRuntime;
 	BYTE bType;
@@ -69,7 +72,7 @@ struct DBINFO
 {
 	RString strServiceName, strID, strIMDbID, strTitle, strYear, strGenres, strContentRating, strCountries,  
 			strStoryline, strDirectors, strWriters, strStars, strSearchTitle, strSearchYear, 
-			strFileName, strEpisodeName, strAirDate;
+			strFileName, strEpisodeName, strEpisodeID, strAirDate;
 	float fRating, fRatingMax, fIMDbRating, fIMDbRatingMax;
 	INT_PTR nVotes, nIMDbVotes, nMetascore, nSeason, nEpisode, nRuntime;
 	BYTE bType;
@@ -133,4 +136,5 @@ protected:
 	RArray<INT_PTR> m_filterCategories;
 	bool m_bShowSeenMovies, m_bShowHiddenMovies, m_bSearchStoryline, m_bShowOnlyTV, m_bShowOnlyMovies;
 	UINT_PTR m_sortBy;
+	SeriesDedup m_seriesDedup;
 };

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "MovieExplorer.h"
+#include "UpdateThread.h"
 
 static RString CommaToPipe(RString str)
 {
@@ -38,6 +39,19 @@ static bool OMDbIsResponseTrue(RXMLFile2 &xmlFile)
 	const RXMLElem2 &root = xmlFile.GetRootElem();
 	RString strResponse = root.GetAttribute(_T("response"));
 	return _tcsicmp(strResponse, _T("true")) == 0;
+}
+
+static bool OMDbIsRateLimited(RXMLFile2 &xmlFile)
+{
+	const RXMLElem2 &root = xmlFile.GetRootElem();
+	RString strResponse = root.GetAttribute(_T("response"));
+	if (_tcsicmp(strResponse, _T("false")) == 0)
+	{
+		RString strError = root.GetAttribute(_T("error"));
+		if (strError.FindNoCase(_T("limit")) >= 0)
+			return true;
+	}
+	return false;
 }
 
 static RString OMDbBuildSearchURL(RString strAPIKey, RString strTitle, RString strYear, BYTE bType)
@@ -100,18 +114,24 @@ static bool OMDbPickBestResult(RXMLFile2 &xmlFile, RString strSearchTitle, RStri
 	return !strBestID.IsEmpty();
 }
 
-static bool OMDbSearch(RString strAPIKey, RString strTitle, RString strYear, BYTE bType, RString &strBestID)
+static int OMDbSearch(RString strAPIKey, RString strTitle, RString strYear, BYTE bType, RString &strBestID)
 {
 	RString strURL = OMDbBuildSearchURL(strAPIKey, strTitle, strYear, bType);
 
 	RXMLFile2 xmlFile;
 	if (!OMDbRequest(strURL, xmlFile))
-		return false;
+		return DBI_STATUS_CONNERROR;
+
+	if (OMDbIsRateLimited(xmlFile))
+		return DBI_STATUS_RATELIMITED;
 
 	if (!OMDbIsResponseTrue(xmlFile))
-		return false;
+		return DBI_STATUS_UNKNOWN;
 
-	return OMDbPickBestResult(xmlFile, strTitle, strYear, bType, strBestID);
+	if (!OMDbPickBestResult(xmlFile, strTitle, strYear, bType, strBestID))
+		return DBI_STATUS_UNKNOWN;
+
+	return DBI_STATUS_UPDATED;
 }
 
 static RString TryApostropheVariants(RString strTitle)
@@ -159,6 +179,26 @@ static RString TryApostropheVariants(RString strTitle)
 		}
 	}
 
+	if (strResult.GetLength() >= 3)
+	{
+		for (INT_PTR pos = 0; pos < strResult.GetLength() - 2; ++pos)
+		{
+			if ((strResult[pos] == _T('O') || strResult[pos] == _T('o')) &&
+				strResult[pos + 1] >= _T('A') && strResult[pos + 1] <= _T('Z') &&
+				strResult[pos + 2] >= _T('a') && strResult[pos + 2] <= _T('z') &&
+				(pos == 0 || strResult[pos - 1] == _T(' ')))
+			{
+				RString strAfter = strResult.Mid(pos + 1, 2);
+				if (_tcsicmp(strAfter, _T("Of")) != 0 && _tcsicmp(strAfter, _T("Or")) != 0 &&
+					_tcsicmp(strAfter, _T("On")) != 0)
+				{
+					strResult = strResult.Left(pos + 1) + _T("'") + strResult.Mid(pos + 1);
+					break;
+				}
+			}
+		}
+	}
+
 	return strResult;
 }
 
@@ -181,7 +221,54 @@ static RString TryStripCountrySuffix(RString strTitle)
 	return strTitle;
 }
 
-DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
+static RString TryStripPart(RString strTitle)
+{
+	INT_PTR nPartPos = strTitle.FindNoCase(_T(" Part "));
+	if (nPartPos <= 0)
+		return strTitle;
+
+	RString strAfterPart = strTitle.Mid(nPartPos + 6);
+
+	INT_PTR nPartNum = 0;
+	if (!strAfterPart.IsEmpty())
+	{
+		if (strAfterPart.FindNoCase(_T("I")) == 0)
+		{
+			RString strRoman = strAfterPart;
+			INT_PTR nLen = 0;
+			for (INT_PTR i = 0; i < strRoman.GetLength(); ++i)
+			{
+				if (strRoman[i] == _T('I') || strRoman[i] == _T('i'))
+					++nLen;
+				else
+					break;
+			}
+			if (nLen > 0 && nLen <= 3 && (nLen == strRoman.GetLength() || strRoman[nLen] == _T(' ')))
+				nPartNum = (int)nLen;
+		}
+		if (nPartNum == 0)
+		{
+			RString strNum;
+			for (INT_PTR i = 0; i < strAfterPart.GetLength(); ++i)
+			{
+				if (strAfterPart[i] >= _T('0') && strAfterPart[i] <= _T('9'))
+					strNum += strAfterPart[i];
+				else
+					break;
+			}
+			if (!strNum.IsEmpty())
+				nPartNum = StringToNumber(strNum);
+		}
+	}
+
+	RString strBase = strTitle.Left(nPartPos);
+	if (nPartNum > 0)
+		return strBase + _T(" ") + NumberToString(nPartNum);
+
+	return strBase;
+}
+
+DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesCache> *pSeriesCache)
 {
 	if (!pInfo || pInfo->strSearchTitle.IsEmpty() || pInfo->strServiceName != _T("imdb.com"))
 		{ASSERT(false); return DBI_STATUS_SCRAPEERROR;}
@@ -189,44 +276,80 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 	if (strOMDbAPIKey.IsEmpty())
 		return DBI_STATUS_CONNERROR;
 
-	// Find movie ID when it is not provided
-
 	if (pInfo->strID.IsEmpty())
 	{
 		RString strBestID;
 
-		// Attempt 1: search with title + year
-
-		bool bFound = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, pInfo->strSearchYear, pInfo->bType, strBestID);
-
-		// Attempt 2: retry without year (year in filename may not match OMDb)
+		int nSearchResult = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, pInfo->strSearchYear, pInfo->bType, strBestID);
+		if (nSearchResult == DBI_STATUS_RATELIMITED)
+			return DBI_STATUS_RATELIMITED;
+		bool bFound = (nSearchResult == DBI_STATUS_UPDATED);
 
 		if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
-			bFound = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, RString(), pInfo->bType, strBestID);
-
-		// Attempt 3: retry with apostrophe variants (filenames often strip apostrophes)
+		{
+			nSearchResult = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, RString(), pInfo->bType, strBestID);
+			if (nSearchResult == DBI_STATUS_RATELIMITED)
+				return DBI_STATUS_RATELIMITED;
+			bFound = (nSearchResult == DBI_STATUS_UPDATED);
+		}
 
 		if (!bFound)
 		{
 			RString strApostrophe = TryApostropheVariants(pInfo->strSearchTitle);
 			if (strApostrophe != pInfo->strSearchTitle)
-				bFound = OMDbSearch(strOMDbAPIKey, strApostrophe, pInfo->strSearchYear, pInfo->bType, strBestID);
+			{
+				nSearchResult = OMDbSearch(strOMDbAPIKey, strApostrophe, pInfo->strSearchYear, pInfo->bType, strBestID);
+				if (nSearchResult == DBI_STATUS_RATELIMITED)
+					return DBI_STATUS_RATELIMITED;
+				bFound = (nSearchResult == DBI_STATUS_UPDATED);
 
-			if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
-				bFound = OMDbSearch(strOMDbAPIKey, strApostrophe, RString(), pInfo->bType, strBestID);
+				if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
+				{
+					nSearchResult = OMDbSearch(strOMDbAPIKey, strApostrophe, RString(), pInfo->bType, strBestID);
+					if (nSearchResult == DBI_STATUS_RATELIMITED)
+						return DBI_STATUS_RATELIMITED;
+					bFound = (nSearchResult == DBI_STATUS_UPDATED);
+				}
+			}
 		}
-
-		// Attempt 4: retry without country suffix (e.g. "Love Island US" -> "Love Island")
 
 		if (!bFound && pInfo->bType == DB_TYPE_TV)
 		{
 			RString strStripped = TryStripCountrySuffix(pInfo->strSearchTitle);
 			if (strStripped != pInfo->strSearchTitle)
 			{
-				bFound = OMDbSearch(strOMDbAPIKey, strStripped, pInfo->strSearchYear, pInfo->bType, strBestID);
+				nSearchResult = OMDbSearch(strOMDbAPIKey, strStripped, pInfo->strSearchYear, pInfo->bType, strBestID);
+				if (nSearchResult == DBI_STATUS_RATELIMITED)
+					return DBI_STATUS_RATELIMITED;
+				bFound = (nSearchResult == DBI_STATUS_UPDATED);
 
 				if (!bFound && !pInfo->strSearchYear.IsEmpty())
-					bFound = OMDbSearch(strOMDbAPIKey, strStripped, RString(), pInfo->bType, strBestID);
+				{
+					nSearchResult = OMDbSearch(strOMDbAPIKey, strStripped, RString(), pInfo->bType, strBestID);
+					if (nSearchResult == DBI_STATUS_RATELIMITED)
+						return DBI_STATUS_RATELIMITED;
+					bFound = (nSearchResult == DBI_STATUS_UPDATED);
+				}
+			}
+		}
+
+		if (!bFound)
+		{
+			RString strStrippedPart = TryStripPart(pInfo->strSearchTitle);
+			if (strStrippedPart != pInfo->strSearchTitle)
+			{
+				nSearchResult = OMDbSearch(strOMDbAPIKey, strStrippedPart, pInfo->strSearchYear, pInfo->bType, strBestID);
+				if (nSearchResult == DBI_STATUS_RATELIMITED)
+					return DBI_STATUS_RATELIMITED;
+				bFound = (nSearchResult == DBI_STATUS_UPDATED);
+
+				if (!bFound && !pInfo->strSearchYear.IsEmpty())
+				{
+					nSearchResult = OMDbSearch(strOMDbAPIKey, strStrippedPart, RString(), pInfo->bType, strBestID);
+					if (nSearchResult == DBI_STATUS_RATELIMITED)
+						return DBI_STATUS_RATELIMITED;
+					bFound = (nSearchResult == DBI_STATUS_UPDATED);
+				}
 			}
 		}
 
@@ -236,8 +359,6 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 		pInfo->strID = strBestID;
 	}
 
-	// Retrieve movie data
-
 	RString strURL = _T("https://www.omdbapi.com/?apikey=") + strOMDbAPIKey +
 		_T("&i=") + pInfo->strID +
 		_T("&plot=full&r=xml");
@@ -245,6 +366,9 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 	RXMLFile2 xmlFile;
 	if (!OMDbRequest(strURL, xmlFile))
 		return DBI_STATUS_CONNERROR;
+
+	if (OMDbIsRateLimited(xmlFile))
+		return DBI_STATUS_RATELIMITED;
 
 	if (!OMDbIsResponseTrue(xmlFile))
 		return DBI_STATUS_UNKNOWN;
@@ -265,8 +389,6 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 	if (!pMovie)
 		return DBI_STATUS_SCRAPEERROR;
 
-	// Extract type
-
 	RString strType = pMovie->GetAttribute(_T("type"));
 	if (_tcsicmp(strType, _T("series")) == 0)
 		pInfo->bType = DB_TYPE_TV;
@@ -275,58 +397,86 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 	else
 		pInfo->bType = DB_TYPE_MOVIE;
 
-	// For TV episodes with season/episode info, fetch the specific episode
-
 	if (pInfo->bType == DB_TYPE_TV && pInfo->nSeason >= 0 && pInfo->nEpisode >= 0)
 	{
-		RString strEpURL = _T("https://www.omdbapi.com/?apikey=") + strOMDbAPIKey +
-			_T("&i=") + pInfo->strID +
-			_T("&Season=") + NumberToString(pInfo->nSeason) +
-			_T("&Episode=") + NumberToString(pInfo->nEpisode) +
-			_T("&r=xml");
+		SeriesSeasonData *pSeasonData = NULL;
 
-		RXMLFile2 xmlEpFile;
-		if (OMDbRequest(strEpURL, xmlEpFile) && OMDbIsResponseTrue(xmlEpFile))
+		if (pSeriesCache)
 		{
-			const RXMLElem2 &epRoot = xmlEpFile.GetRootElem();
-			const RArray<RXMLElem2*> &epChildren = epRoot.GetChildren();
-
-			for (INT_PTR i = 0; i < epChildren.GetSize(); ++i)
+			auto it = pSeriesCache->find(pInfo->strID);
+			if (it != pSeriesCache->end())
 			{
-				if (epChildren[i]->GetName() == _T("episode"))
+				auto seasonIt = it->second.seasons.find((int)pInfo->nSeason);
+				if (seasonIt != it->second.seasons.end())
+					pSeasonData = &seasonIt->second;
+			}
+
+			if (!pSeasonData)
+			{
+				RString strSeasonURL = _T("https://www.omdbapi.com/?apikey=") + strOMDbAPIKey +
+					_T("&i=") + pInfo->strID +
+					_T("&Season=") + NumberToString(pInfo->nSeason) +
+					_T("&r=xml");
+
+				RXMLFile2 xmlSeasonFile;
+				if (OMDbRequest(strSeasonURL, xmlSeasonFile))
 				{
-					RString strEpTitle = epChildren[i]->GetAttribute(_T("title"));
-					RString strEpID = epChildren[i]->GetAttribute(_T("imdbID"));
-					RString strEpRating = epChildren[i]->GetAttribute(_T("imdbRating"));
-					RString strEpVotes = epChildren[i]->GetAttribute(_T("imdbVotes"));
+					if (OMDbIsRateLimited(xmlSeasonFile))
+						return DBI_STATUS_RATELIMITED;
 
-					if (!strEpTitle.IsEmpty())
-						pInfo->strEpisodeName = strEpTitle;
-
-					if (!strEpRating.IsEmpty() && strEpRating != _T("N/A"))
-						pInfo->fRating = StringToFloat(strEpRating);
-
-					if (!strEpVotes.IsEmpty() && strEpVotes != _T("N/A"))
+					if (OMDbIsResponseTrue(xmlSeasonFile))
 					{
-						RString strVotes = strEpVotes;
-						strVotes.Replace(_T(","), _T(""));
-						pInfo->nVotes = StringToNumber(strVotes);
+						SeriesSeasonData newData;
+						const RXMLElem2 &seasonRoot = xmlSeasonFile.GetRootElem();
+						const RArray<RXMLElem2*> &epChildren = seasonRoot.GetChildren();
+
+						for (INT_PTR i = 0; i < epChildren.GetSize(); ++i)
+						{
+							if (epChildren[i]->GetName() == _T("episode"))
+							{
+								newData.episodeTitles.Add(epChildren[i]->GetAttribute(_T("title")));
+								newData.episodeIDs.Add(epChildren[i]->GetAttribute(_T("imdbID")));
+								newData.episodeRatings.Add(epChildren[i]->GetAttribute(_T("imdbRating")));
+								newData.episodeVotes.Add(epChildren[i]->GetAttribute(_T("imdbVotes")));
+								newData.episodeReleased.Add(epChildren[i]->GetAttribute(_T("released")));
+							}
+						}
+
+						(*pSeriesCache)[pInfo->strID].seasons[(int)pInfo->nSeason] = newData;
+						pSeasonData = &(*pSeriesCache)[pInfo->strID].seasons[(int)pInfo->nSeason];
 					}
-
-					pInfo->fRatingMax = 10.0f;
-
-					if (!strEpID.IsEmpty())
-					{
-						pInfo->strID = strEpID;
-					}
-
-					break;
 				}
 			}
 		}
-	}
 
-	// Extract basic fields from the movie element
+		if (pSeasonData)
+		{
+			INT_PTR nEpIndex = pInfo->nEpisode - 1;
+			if (nEpIndex >= 0 && nEpIndex < pSeasonData->episodeTitles.GetSize())
+			{
+				if (!pSeasonData->episodeTitles[nEpIndex].IsEmpty())
+					pInfo->strEpisodeName = pSeasonData->episodeTitles[nEpIndex];
+
+				RString strEpID = pSeasonData->episodeIDs[nEpIndex];
+				if (!strEpID.IsEmpty())
+					pInfo->strEpisodeID = strEpID;
+
+				RString strEpRating = pSeasonData->episodeRatings[nEpIndex];
+				if (!strEpRating.IsEmpty() && strEpRating != _T("N/A"))
+					pInfo->fRating = StringToFloat(strEpRating);
+
+				RString strEpVotes = pSeasonData->episodeVotes[nEpIndex];
+				if (!strEpVotes.IsEmpty() && strEpVotes != _T("N/A"))
+				{
+					RString strVotes = strEpVotes;
+					strVotes.Replace(_T(","), _T(""));
+					pInfo->nVotes = StringToNumber(strVotes);
+				}
+
+				pInfo->fRatingMax = 10.0f;
+			}
+		}
+	}
 
 	RString strTitle = pMovie->GetAttribute(_T("title"));
 	if (!strTitle.IsEmpty())
@@ -372,16 +522,12 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 	if (!strCountry.IsEmpty() && strCountry != _T("N/A"))
 		pInfo->strCountries = CommaToPipe(strCountry);
 
-	// Extract poster
-
 	RString strPoster = pMovie->GetAttribute(_T("poster"));
 	if (!strPoster.IsEmpty() && strPoster != _T("N/A"))
 	{
 		if (_tcsicmp(GETPREFSTR(_T("InfoService"), _T("Poster")), _T("imdb.com")) == 0)
 			URLToData(strPoster, pInfo->posterData);
 	}
-
-	// Extract ratings
 
 	RString strImdbRating = pMovie->GetAttribute(_T("imdbRating"));
 	if (!strImdbRating.IsEmpty() && strImdbRating != _T("N/A"))
@@ -405,8 +551,6 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey)
 	RString strMetascore = pMovie->GetAttribute(_T("metascore"));
 	if (!strMetascore.IsEmpty() && strMetascore != _T("N/A"))
 		pInfo->nMetascore = StringToNumber(strMetascore);
-
-	// Title formatting: move "The" and "A" to end
 
 	if (pInfo->strTitle.GetLength() >= 4 && pInfo->strTitle.Left(4) == _T("The "))
 		pInfo->strTitle = pInfo->strTitle.Mid(4) + _T(", The");

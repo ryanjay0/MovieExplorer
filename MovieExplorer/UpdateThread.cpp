@@ -5,9 +5,18 @@
 #include "ScrapeIMDb.h"
 #include "ScrapeMovieMeter.h"
 
+static RString GetCacheFileName(RString strCacheDir, RString strServ, RString strID, INT_PTR nSeason, INT_PTR nEpisode)
+{
+	RString strFileName = strCacheDir + _T("\\") + strServ + _T("\\") + strID;
+	if (nSeason >= 0 && nEpisode >= 0)
+		strFileName += _T("_S") + NumberToString(nSeason) + _T("_E") + NumberToString(nEpisode);
+	return strFileName;
+}
+
 UINT CALLBACK UpdateThread(void *pParam)
 {
 	HWND hDatabaseWnd = ((UPDATETHREADDATA*)pParam)->hDatabaseWnd;
+	SeriesDedup *pDedup = ((UPDATETHREADDATA*)pParam)->pDedup;
 
 	RString strOMDbAPIKey = GETPREFSTR(_T("OMDbAPIKey"));
 
@@ -19,8 +28,6 @@ UINT CALLBACK UpdateThread(void *pParam)
 	UINT64 minTime = currentTime - maxTimeDiff;
 
 	RString strCacheDir = CorrectPath(GETPREFSTR(_T("Database"), _T("CacheDirectory")));
-
-	// Determine which services are in use
 
 	RObArray<RString> servicesInUse;
 	RString strOnlyUse = GETPREFSTR(_T("InfoService"), _T("OnlyUse"));
@@ -34,19 +41,14 @@ UINT CALLBACK UpdateThread(void *pParam)
 			servicesInUse.Add(GETPREFSTR(_T("InfoService"), _T("Title")));
 	}
 
-	// Remove empty entries
 	foreach (servicesInUse, strServ, i)
 		if (strServ.IsEmpty())
 			{servicesInUse.RemoveAt(i); break;}
-
-	// Create thread message queue and signal we're ready
 
 	MSG msg;
 	PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);
 
 	((UPDATETHREADDATA*)pParam)->eReady.SetEvent();
-
-	// Start updating movies
 
 	DBMOVIE mov;
 	DBMOVIE *pOrigMov;
@@ -58,17 +60,25 @@ UINT CALLBACK UpdateThread(void *pParam)
 	INT_PTR nSeason = -1;
 	INT_PTR nEpisode = -1;
 	BYTE bType = DB_TYPE_UNKNOWN;
+	bool bRateLimited = false;
+
+	std::map<RString, SeriesCache> seriesCache;
 
 	while (SendMessage(hDatabaseWnd, DBM_GETMOVIEUPDATE, (WPARAM)&mov, (LPARAM)&pOrigMov))
 	{
 		nSeason = -1; nEpisode = -1; strAirDate.Empty(); bType = DB_TYPE_UNKNOWN;
 		ParseFileName(mov.strFileName, strSearchTitle, strSearchYear, nSeason, nEpisode, strAirDate, bType);
 
+		if (bRateLimited)
+		{
+			mov.bUpdated = true;
+			SendMessage(hDatabaseWnd, DBM_SETMOVIEUPDATE, (WPARAM)&mov, (LPARAM)pOrigMov);
+			continue;
+		}
+
 		foreach (servicesInUse, strServ)
 		{
 			ClearInfo(&info);
-
-			// Get the right ID
 
 			if (strServ == _T("imdb.com"))
 				strID = mov.strIMDbID;
@@ -77,16 +87,28 @@ UINT CALLBACK UpdateThread(void *pParam)
 			else
 				ASSERT(false);
 
-			// If there was an error, don't try to update this movie again
-
-			if (strID == _T("unknown") || strID == _T("connError") || strID == _T("scrapeError"))
+			if (strID == _T("unknown") || strID == _T("connError") || strID == _T("scrapeError") || strID == _T("rateLimited"))
 				continue;
+
+			// Check dedup map for TV series search string -> series ID
+
+			RString strDedupKey;
+			if (strServ == _T("imdb.com") && strID.IsEmpty() && bType == DB_TYPE_TV)
+			{
+				strDedupKey = strSearchTitle + _T("|") + strSearchYear + _T("|") + NumberToString(bType);
+				RString strFoundID;
+				if (pDedup)
+					strFoundID = pDedup->Lookup(strDedupKey);
+				if (!strFoundID.IsEmpty())
+					strID = strFoundID;
+			}
 
 			// Try to update from cache when ID is provided
 
 			if (!strID.IsEmpty())
 			{
-				if (xmlFile.Read(strCacheDir + _T("\\") + strServ + _T("\\") + strID + _T(".xml")))
+				RString strCacheFile = GetCacheFileName(strCacheDir, strServ, strID, nSeason, nEpisode);
+				if (xmlFile.Read(strCacheFile + _T(".xml")))
 				{
 					pInfoTag = xmlFile.GetRootTag()->GetChild(_T("MovieInfo"));
 					if (pInfoTag)
@@ -96,7 +118,11 @@ UINT CALLBACK UpdateThread(void *pParam)
 						if (timestamp >= minTime)
 						{
 							TagToInfo(pInfoTag, &info);
-							VERIFY(FileToData(strCacheDir + _T("\\") + strServ + _T("\\") + strID +
+
+							RString strPosterID = info.strID.IsEmpty() ? strID : info.strID;
+							if (nSeason >= 0 && nEpisode >= 0 && !info.strEpisodeID.IsEmpty())
+								strPosterID = strID;
+							VERIFY(FileToData(strCacheDir + _T("\\") + strServ + _T("\\") + strPosterID +
 									_T(".jpg"), info.posterData));
 
 							for (int i = 0; i < DBI_STAR_NUMBER; i++)
@@ -137,7 +163,7 @@ UINT CALLBACK UpdateThread(void *pParam)
 				info.strID = strID;
 
 				if (strServ == _T("imdb.com"))
-					info.status = ScrapeIMDb(&info, strOMDbAPIKey);
+					info.status = ScrapeIMDb(&info, strOMDbAPIKey, &seriesCache);
 				else if (strServ == _T("moviemeter.nl"))
 					info.status = ScrapeMovieMeter(&info);
 				else
@@ -146,11 +172,22 @@ UINT CALLBACK UpdateThread(void *pParam)
 				if (PeekMessage(&msg, NULL, WM_QUIT, WM_QUIT, PM_NOREMOVE))
 					return 0;
 
+				if (info.status == DBI_STATUS_RATELIMITED)
+				{
+					LOG(_T("OMDb API rate limit reached. Stopping web updates.\n"));
+					bRateLimited = true;
+					strID = _T("rateLimited");
+					break;
+				}
+
 				if (info.status == DBI_STATUS_UPDATED)
 				{
 					strID = info.strID;
 					LOG(_T("Succesfully updated ") + info.strTitle + _T(" (") + info.strYear +
 						_T(") from ") + strServ + _T(".\n"));
+
+					if (pDedup && !strDedupKey.IsEmpty())
+						pDedup->Store(strDedupKey, strID);
 
 					++nUpdatedFromWeb;
 
@@ -161,8 +198,10 @@ UINT CALLBACK UpdateThread(void *pParam)
 						CreateDirectory(strCacheDir);
 					if (!DirectoryExists(strCacheDir + _T("\\") + strServ))
 						CreateDirectory(strCacheDir + _T("\\") + strServ);
-					VERIFY(xmlFile.Write(strCacheDir + _T("\\") + strServ +
-							_T("\\") + strID + _T(".xml")));
+
+					RString strCacheBase = GetCacheFileName(strCacheDir, strServ, strID, nSeason, nEpisode);
+					VERIFY(xmlFile.Write(strCacheBase + _T(".xml")));
+
 					VERIFY(DataToFile(info.posterData, strCacheDir + _T("\\") + strServ +
 							_T("\\") + strID + _T(".jpg")));
 
@@ -206,6 +245,12 @@ UINT CALLBACK UpdateThread(void *pParam)
 				mov.strTitle = info.strTitle;
 				mov.strYear = info.strYear;
 				mov.nYear = StringToNumber(mov.strYear);
+				if (mov.nYear == 0 && !mov.strYear.IsEmpty())
+				{
+					INT_PTR nDash = mov.strYear.Find(_T('-'));
+					if (nDash > 0)
+						mov.nYear = StringToNumber(mov.strYear.Left(nDash));
+				}
 				mov.strCountries = info.strCountries;
 				mov.strGenres = info.strGenres;
 				mov.nRuntime = info.nRuntime;
@@ -234,6 +279,7 @@ UINT CALLBACK UpdateThread(void *pParam)
 				mov.nSeason = info.nSeason;
 				mov.nEpisode = info.nEpisode;
 				mov.strEpisodeName = info.strEpisodeName;
+				mov.strEpisodeID = info.strEpisodeID;
 				mov.strAirDate = info.strAirDate;
 				mov.bType = info.bType;
 				for (int i = 0; i < DBI_STAR_NUMBER; i++)
@@ -257,8 +303,6 @@ UINT CALLBACK UpdateThread(void *pParam)
 
 		if (PeekMessage(&msg, NULL, WM_QUIT, WM_QUIT, PM_NOREMOVE))
 			return 0;
-
-		// Deliver updated movie data to main thread
 
 		SendMessage(hDatabaseWnd, DBM_SETMOVIEUPDATE, (WPARAM)&mov, (LPARAM)pOrigMov);
 
