@@ -1,6 +1,6 @@
 #pragma once
 
-struct SeriesDedup;
+#include "UpdateThread.h"
 
 // NOTE: The ID string of the movie contains the status
 // ""            : movie is being updated

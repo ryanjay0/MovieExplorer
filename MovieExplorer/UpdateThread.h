@@ -1,7 +1,7 @@
 #pragma once
 
 #include <map>
-#include "RCriticalSection.h"
+#include "..\RClasses\RCriticalSection.h"
 
 struct SeriesSeasonData
 {

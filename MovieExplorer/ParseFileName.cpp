@@ -68,12 +68,15 @@ void ParseFileName(RString_ strFileName, RString &strTitle, RString &strYear, IN
 				bool bLeftSpace = (i == 0 || strTitle[i - 1] == _T(' '));
 				bool bRightSpace = (i + 1 >= strTitle.GetLength() || strTitle[i + 1] == _T(' '));
 				if (bLeftSpace || bRightSpace)
-					strResult += _T(' ');
+					strResult += _T(" ");
 				else
-					strResult += _T('-');
+					strResult += _T("-");
 			}
 			else
-				strResult += strTitle[i];
+			{
+				TCHAR sz[2] = { strTitle[i], 0 };
+				strResult += sz;
+			}
 		}
 		strTitle = strResult;
 	}
