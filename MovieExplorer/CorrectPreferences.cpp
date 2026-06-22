@@ -67,6 +67,7 @@ bool CorrectPreferences()
 	prefMgr.SetBool(_T("ShowHiddenMovies"), false, false);
 	prefMgr.SetInt(_T("SortBy"), 0, false);
 	prefMgr.SetStr(_T("OMDbAPIKey"), _T(""), false);
+	prefMgr.SetInt(_T("OMDbDailyLimit"), 900, false);
 	prefMgr.SetBool(_T("AutoCategories"), true, false);
 	prefMgr.SetBool(_T("HideUserCategories"), false, false);
 	prefMgr.SetBool(_T("UseVlc"), false, false);

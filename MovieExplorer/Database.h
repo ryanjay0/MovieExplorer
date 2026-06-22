@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UpdateThread.h"
+#include "OMDbUsage.h"
 
 // NOTE: The ID string of the movie contains the status
 // ""            : movie is being updated
@@ -137,4 +138,5 @@ protected:
 	bool m_bShowSeenMovies, m_bShowHiddenMovies, m_bSearchStoryline, m_bShowOnlyTV, m_bShowOnlyMovies;
 	UINT_PTR m_sortBy;
 	SeriesDedup m_seriesDedup;
+	OMDbUsageTracker m_usageTracker;
 };

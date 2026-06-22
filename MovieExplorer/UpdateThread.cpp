@@ -17,6 +17,7 @@ UINT CALLBACK UpdateThread(void *pParam)
 {
 	HWND hDatabaseWnd = ((UPDATETHREADDATA*)pParam)->hDatabaseWnd;
 	SeriesDedup *pDedup = ((UPDATETHREADDATA*)pParam)->pDedup;
+	OMDbUsageTracker *pUsage = ((UPDATETHREADDATA*)pParam)->pUsage;
 
 	RString strOMDbAPIKey = GETPREFSTR(_T("OMDbAPIKey"));
 
@@ -166,7 +167,7 @@ UINT CALLBACK UpdateThread(void *pParam)
 				info.strID = strID;
 
 				if (strServ == _T("imdb.com"))
-					info.status = ScrapeIMDb(&info, strOMDbAPIKey, &seriesCache);
+					info.status = ScrapeIMDb(&info, strOMDbAPIKey, &seriesCache, pUsage);
 				else if (strServ == _T("moviemeter.nl"))
 					info.status = ScrapeMovieMeter(&info);
 				else

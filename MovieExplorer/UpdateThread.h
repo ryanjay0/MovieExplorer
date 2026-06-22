@@ -38,11 +38,14 @@ struct SeriesDedup
 	}
 };
 
+struct OMDbUsageTracker;
+
 struct UPDATETHREADDATA
 {
 	HWND hDatabaseWnd;
 	REvent eReady;
 	SeriesDedup *pDedup;
+	OMDbUsageTracker *pUsage;
 };
 
 UINT CALLBACK UpdateThread(void *pParam);

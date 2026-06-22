@@ -19,10 +19,11 @@ protected:
 
 	RStatic m_stcIndexExtensions, m_stcMaxInfoAge, m_stcOnlyUse, m_stcTitle, m_stcYear, 
 			m_stcGenres, m_stcCountries, m_stcRuntime, m_stcStoryline, m_stcDirectors, 
-			m_stcWriters, m_stcStars, m_stcPoster, m_stcRating, m_stcOMDbAPIKey;
+			m_stcWriters, m_stcStars, m_stcPoster, m_stcRating, m_stcOMDbAPIKey,
+			m_stcDailyLimit, m_stcUsageToday;
 	RComboBox m_cbOnlyUse, m_cbTitle, m_cbYear, m_cbGenres, m_cbCountries, m_cbRuntime, 
 			m_cbStoryline, m_cbDirectors, m_cbWriters, m_cbStars, m_cbPoster, m_cbRating;
-	REdit m_eIndexExtensions, m_eMaxInfoAge, m_eOMDbAPIKey;
+	REdit m_eIndexExtensions, m_eMaxInfoAge, m_eOMDbAPIKey, m_eDailyLimit;
 	RButton m_grpDatabase, m_grpInfoService, m_chkIndexDirectories, m_btnRecheckFailed;
 	bool m_bInitialized;
 };

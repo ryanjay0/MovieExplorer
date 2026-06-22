@@ -63,6 +63,20 @@ void CDatabasePage::ApplyChanges()
 		bRequireUpdate = true;
 	}
 
+	// OMDbDailyLimit
+
+	INT_PTR nDailyLimit = StringToNumber(m_eDailyLimit.GetText());
+	if (nDailyLimit < 1)
+	{
+		nDailyLimit = 900;
+		m_eDailyLimit.SetText(_T("900"));
+	}
+
+	if (nDailyLimit != GETPREFINT(_T("OMDbDailyLimit")))
+	{
+		SETPREFINT(_T("OMDbDailyLimit"), (int)nDailyLimit);
+	}
+
 	// Services
 	
 	RString str = m_cbOnlyUse.GetText(m_cbOnlyUse.GetSel());
@@ -175,6 +189,9 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 			!m_eOMDbAPIKey.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP, WS_EX_CLIENTEDGE) ||
 			!m_stcOMDbAPIKey.Create<RStatic>(m_hWnd) ||
 			!m_btnRecheckFailed.Create<RButton>(m_hWnd, WS_TABSTOP) ||
+			!m_stcDailyLimit.Create<RStatic>(m_hWnd) ||
+			!m_eDailyLimit.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP|ES_NUMBER, WS_EX_CLIENTEDGE) ||
+			!m_stcUsageToday.Create<RStatic>(m_hWnd) ||
 			!m_grpDatabase.Create<RButton>(m_hWnd, BS_GROUPBOX) ||
 
 			!m_cbOnlyUse.Create<RComboBox>(m_hWnd, cbStyle) ||
@@ -217,6 +234,11 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 	m_eMaxInfoAge.SetText(GETPREFSTR(_T("Database"), _T("MaxInfoAge")));
 
 	m_eOMDbAPIKey.SetText(GETPREFSTR(_T("OMDbAPIKey")));
+
+	m_eDailyLimit.SetText(NumberToString(GETPREFINT(_T("OMDbDailyLimit"))));
+
+	m_stcUsageToday.SetText(_T("Used: ") + NumberToString(GetDB()->m_usageTracker.GetCount()) +
+		_T("/") + NumberToString(GetDB()->m_usageTracker.GetLimit()) + _T(" today"));
 
 
 	// Populate services combo boxes
@@ -300,7 +322,7 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	UNREFERENCED_PARAMETER(type);
 	UNREFERENCED_PARAMETER(cy);
 	int y = DUY(4);
-	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(102));
+	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(120));
 	y += DUY(12);
 	MoveWindow(m_stcIndexExtensions, DUX(14), y, DUX(200), DUY(10));
 	y += DUY(11);
@@ -315,8 +337,12 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	MoveWindow(m_eOMDbAPIKey, DUX(14) + m_stcOMDbAPIKey.GetWidth() + DUX(4), y, cx - DUX(28) - m_stcOMDbAPIKey.GetWidth() - DUX(4), DUY(12));
 	y += DUY(16);
 	MoveWindow(m_btnRecheckFailed, DUX(14), y, DUX(80), DUY(12));
+	y += DUY(16);
+	MoveStatic(m_stcDailyLimit, DUX(14), y+DUY(2));
+	MoveWindow(m_eDailyLimit, DUX(14) + m_stcDailyLimit.GetWidth() + DUX(4), y, DUX(40), DUY(12));
+	MoveStatic(m_stcUsageToday, DUX(14) + m_stcDailyLimit.GetWidth() + DUX(4) + DUX(44), y+DUY(2));
 
-	y = DUY(112);
+	y = DUY(130);
 	MoveWindow(m_grpInfoService, DUX(4), y, cx - DUX(8), DUY(112));
 	y += DUY(12);
 	MoveWindow(m_stcOnlyUse, DUX(14), y+DUY(1)+1, DUX(60), DUY(10));
@@ -363,6 +389,9 @@ void CDatabasePage::OnPrefChanged()
 	m_stcMaxInfoAge.SetText(GETSTR(IDS_MAXINFOAGE) + _T(":"));
 	m_stcOMDbAPIKey.SetText(_T("OMDb API Key:"));
 	m_btnRecheckFailed.SetText(_T("Recheck Failed"));
+	m_stcDailyLimit.SetText(_T("Daily API Limit:"));
+	m_stcUsageToday.SetText(_T("Used: ") + NumberToString(GetDB()->m_usageTracker.GetCount()) +
+		_T("/") + NumberToString(GetDB()->m_usageTracker.GetLimit()) + _T(" today"));
 	m_grpDatabase.SetText(GETSTR(IDS_DATABASE));
 
 	m_stcOnlyUse.SetText(GETSTR(IDS_ONLYUSE) + _T(":"));

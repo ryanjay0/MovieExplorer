@@ -752,6 +752,8 @@ void CDatabase::Update()
 	CancelUpdate();
 
 	m_seriesDedup.searchToID.clear();
+	m_usageTracker.Load(GETPREFSTR(_T("Database"), _T("CacheDirectory")));
+	LOG(_T("OMDb API usage today: ") + NumberToString(m_usageTracker.GetCount()) + _T("/") + NumberToString(m_usageTracker.GetLimit()) + _T(".\n"));
 	m_updateMovies.SetSize(0);
 	foreach (m_categories, cat)
 		foreach (cat.directories, dir)
@@ -774,6 +776,7 @@ void CDatabase::Update()
 		UPDATETHREADDATA threadData;
 		threadData.hDatabaseWnd = m_hWnd;
 		threadData.pDedup = &m_seriesDedup;
+		threadData.pUsage = &m_usageTracker;
 		UINT idThread;
 		HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, &threadData, 0, &idThread);
 		ASSERT(hThread);
@@ -792,6 +795,7 @@ void CDatabase::Update(DBMOVIE *pMov)
 		UPDATETHREADDATA threadData;
 		threadData.hDatabaseWnd = m_hWnd;
 		threadData.pDedup = &m_seriesDedup;
+		threadData.pUsage = &m_usageTracker;
 		UINT idThread;
 		HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, &threadData, 0, &idThread);
 		ASSERT(hThread);

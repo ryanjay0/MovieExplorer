@@ -237,6 +237,7 @@
     <ClInclude Include="..\MainWnd.h" />
     <ClInclude Include="..\messages.h" />
     <ClInclude Include="..\MovieExplorer.h" />
+    <ClInclude Include="..\OMDbUsage.h" />
     <ClInclude Include="..\OptionsDlg.h" />
     <ClInclude Include="..\ParseFileName.h" />
     <ClInclude Include="..\ReBar.h" />
@@ -272,6 +273,7 @@
     <ClCompile Include="..\LogWnd.cpp" />
     <ClCompile Include="..\MainWnd.cpp" />
     <ClCompile Include="..\MovieExplorer.cpp" />
+    <ClCompile Include="..\OMDbUsage.cpp" />
     <ClCompile Include="..\OptionsDlg.cpp" />
     <ClCompile Include="..\ParseFileName.cpp" />
     <ClCompile Include="..\ReBar.cpp" />

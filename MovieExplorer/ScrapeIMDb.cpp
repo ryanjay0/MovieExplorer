@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "MovieExplorer.h"
 #include "UpdateThread.h"
+#include "OMDbUsage.h"
 
 static RString CommaToPipe(RString str)
 {
@@ -114,13 +115,19 @@ static bool OMDbPickBestResult(RXMLFile2 &xmlFile, RString strSearchTitle, RStri
 	return !strBestID.IsEmpty();
 }
 
-static int OMDbSearch(RString strAPIKey, RString strTitle, RString strYear, BYTE bType, RString &strBestID)
+static int OMDbSearch(RString strAPIKey, RString strTitle, RString strYear, BYTE bType, RString &strBestID, OMDbUsageTracker *pUsage)
 {
+	if (pUsage && !pUsage->RequestAllowed())
+		return DBI_STATUS_RATELIMITED;
+
 	RString strURL = OMDbBuildSearchURL(strAPIKey, strTitle, strYear, bType);
 
 	RXMLFile2 xmlFile;
 	if (!OMDbRequest(strURL, xmlFile))
 		return DBI_STATUS_CONNERROR;
+
+	if (pUsage)
+		pUsage->Increment();
 
 	if (OMDbIsRateLimited(xmlFile))
 		return DBI_STATUS_RATELIMITED;
@@ -271,7 +278,7 @@ static RString TryStripPart(RString strTitle)
 	return strBase;
 }
 
-DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesCache> *pSeriesCache)
+DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesCache> *pSeriesCache, OMDbUsageTracker *pUsage)
 {
 	if (!pInfo || pInfo->strSearchTitle.IsEmpty() || pInfo->strServiceName != _T("imdb.com"))
 		{ASSERT(false); return DBI_STATUS_SCRAPEERROR;}
@@ -283,14 +290,14 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 	{
 		RString strBestID;
 
-		int nSearchResult = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, pInfo->strSearchYear, pInfo->bType, strBestID);
+		int nSearchResult = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, pInfo->strSearchYear, pInfo->bType, strBestID, pUsage);
 		if (nSearchResult == DBI_STATUS_RATELIMITED)
 			return DBI_STATUS_RATELIMITED;
 		bool bFound = (nSearchResult == DBI_STATUS_UPDATED);
 
 		if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
 		{
-			nSearchResult = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, RString(), pInfo->bType, strBestID);
+			nSearchResult = OMDbSearch(strOMDbAPIKey, pInfo->strSearchTitle, RString(), pInfo->bType, strBestID, pUsage);
 			if (nSearchResult == DBI_STATUS_RATELIMITED)
 				return DBI_STATUS_RATELIMITED;
 			bFound = (nSearchResult == DBI_STATUS_UPDATED);
@@ -301,14 +308,14 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 			RString strApostrophe = TryApostropheVariants(pInfo->strSearchTitle);
 			if (strApostrophe != pInfo->strSearchTitle)
 			{
-				nSearchResult = OMDbSearch(strOMDbAPIKey, strApostrophe, pInfo->strSearchYear, pInfo->bType, strBestID);
+				nSearchResult = OMDbSearch(strOMDbAPIKey, strApostrophe, pInfo->strSearchYear, pInfo->bType, strBestID, pUsage);
 				if (nSearchResult == DBI_STATUS_RATELIMITED)
 					return DBI_STATUS_RATELIMITED;
 				bFound = (nSearchResult == DBI_STATUS_UPDATED);
 
 				if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
 				{
-					nSearchResult = OMDbSearch(strOMDbAPIKey, strApostrophe, RString(), pInfo->bType, strBestID);
+					nSearchResult = OMDbSearch(strOMDbAPIKey, strApostrophe, RString(), pInfo->bType, strBestID, pUsage);
 					if (nSearchResult == DBI_STATUS_RATELIMITED)
 						return DBI_STATUS_RATELIMITED;
 					bFound = (nSearchResult == DBI_STATUS_UPDATED);
@@ -321,14 +328,14 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 			RString strStripped = TryStripCountrySuffix(pInfo->strSearchTitle);
 			if (strStripped != pInfo->strSearchTitle)
 			{
-				nSearchResult = OMDbSearch(strOMDbAPIKey, strStripped, pInfo->strSearchYear, pInfo->bType, strBestID);
+				nSearchResult = OMDbSearch(strOMDbAPIKey, strStripped, pInfo->strSearchYear, pInfo->bType, strBestID, pUsage);
 				if (nSearchResult == DBI_STATUS_RATELIMITED)
 					return DBI_STATUS_RATELIMITED;
 				bFound = (nSearchResult == DBI_STATUS_UPDATED);
 
 				if (!bFound && !pInfo->strSearchYear.IsEmpty())
 				{
-					nSearchResult = OMDbSearch(strOMDbAPIKey, strStripped, RString(), pInfo->bType, strBestID);
+					nSearchResult = OMDbSearch(strOMDbAPIKey, strStripped, RString(), pInfo->bType, strBestID, pUsage);
 					if (nSearchResult == DBI_STATUS_RATELIMITED)
 						return DBI_STATUS_RATELIMITED;
 					bFound = (nSearchResult == DBI_STATUS_UPDATED);
@@ -341,14 +348,14 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 			RString strStrippedPart = TryStripPart(pInfo->strSearchTitle);
 			if (strStrippedPart != pInfo->strSearchTitle)
 			{
-				nSearchResult = OMDbSearch(strOMDbAPIKey, strStrippedPart, pInfo->strSearchYear, pInfo->bType, strBestID);
+				nSearchResult = OMDbSearch(strOMDbAPIKey, strStrippedPart, pInfo->strSearchYear, pInfo->bType, strBestID, pUsage);
 				if (nSearchResult == DBI_STATUS_RATELIMITED)
 					return DBI_STATUS_RATELIMITED;
 				bFound = (nSearchResult == DBI_STATUS_UPDATED);
 
 				if (!bFound && !pInfo->strSearchYear.IsEmpty())
 				{
-					nSearchResult = OMDbSearch(strOMDbAPIKey, strStrippedPart, RString(), pInfo->bType, strBestID);
+					nSearchResult = OMDbSearch(strOMDbAPIKey, strStrippedPart, RString(), pInfo->bType, strBestID, pUsage);
 					if (nSearchResult == DBI_STATUS_RATELIMITED)
 						return DBI_STATUS_RATELIMITED;
 					bFound = (nSearchResult == DBI_STATUS_UPDATED);
@@ -362,6 +369,9 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 		pInfo->strID = strBestID;
 	}
 
+	if (pUsage && !pUsage->RequestAllowed())
+		return DBI_STATUS_RATELIMITED;
+
 	RString strURL = _T("https://www.omdbapi.com/?apikey=") + strOMDbAPIKey +
 		_T("&i=") + pInfo->strID +
 		_T("&plot=full&r=xml");
@@ -369,6 +379,9 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 	RXMLFile2 xmlFile;
 	if (!OMDbRequest(strURL, xmlFile))
 		return DBI_STATUS_CONNERROR;
+
+	if (pUsage)
+		pUsage->Increment();
 
 	if (OMDbIsRateLimited(xmlFile))
 		return DBI_STATUS_RATELIMITED;
@@ -416,6 +429,9 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 
 			if (!pSeasonData)
 			{
+				if (pUsage && !pUsage->RequestAllowed())
+					return DBI_STATUS_RATELIMITED;
+
 				RString strSeasonURL = _T("https://www.omdbapi.com/?apikey=") + strOMDbAPIKey +
 					_T("&i=") + pInfo->strID +
 					_T("&Season=") + NumberToString(pInfo->nSeason) +
@@ -424,6 +440,9 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 				RXMLFile2 xmlSeasonFile;
 				if (OMDbRequest(strSeasonURL, xmlSeasonFile))
 				{
+					if (pUsage)
+						pUsage->Increment();
+
 					if (OMDbIsRateLimited(xmlSeasonFile))
 						return DBI_STATUS_RATELIMITED;
 
