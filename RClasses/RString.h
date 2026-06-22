@@ -572,4 +572,18 @@ inline bool operator !=(const TCHAR *lpsz1, RString_ str2)
 inline bool operator !=(RString_ str1, RString_ str2)
 	{return str1.NotEquals(str2);}
 
+// Operator <
+
+inline bool operator <(RString_ str1, RString_ str2)
+	{return (_tcscmp((str1.m_lpsz ? str1.m_lpsz : _T("")), 
+			(str2.m_lpsz ? str2.m_lpsz : _T(""))) < 0);}
+
+inline bool operator <(RString_ str1, const TCHAR *lpsz2)
+	{return (_tcscmp((str1.m_lpsz ? str1.m_lpsz : _T("")), 
+			(lpsz2 ? lpsz2 : _T(""))) < 0);}
+
+inline bool operator <(const TCHAR *lpsz1, RString_ str2)
+	{return (_tcscmp((lpsz1 ? lpsz1 : _T("")), 
+			(str2.m_lpsz ? str2.m_lpsz : _T(""))) < 0);}
+
 #endif // __RSTRING_H__
