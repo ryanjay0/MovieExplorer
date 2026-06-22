@@ -8,10 +8,7 @@ bool CorrectPreferences()
 
 	prefMgr.SetStr(_T("LanguageFile"), _T("Languages\\English.xml"), false);
 
-	if (IsWin8())
-		prefMgr.SetStr(_T("ThemeFile"), _T("Themes\\Win8.xml"), false);
-	else
-		prefMgr.SetStr(_T("ThemeFile"), _T("Themes\\Light.xml"), false);
+	prefMgr.SetStr(_T("ThemeFile"), _T("Themes\\Dark.xml"), false);
 
 	prefMgr.SetStr(_T("DatabaseFile"), _T("Database.xml"), false);
 	

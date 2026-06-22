@@ -31,6 +31,7 @@ protected:
 	bool OnSetCursor(HWND hWnd, WORD hitTest, WORD mouseMsg);
 	void OnSetFocus(HWND hWndLoseFocus);
 	void OnSize(DWORD type, WORD cx, WORD cy);
+	void OnXButtonDown(WORD xButton, short x, short y);
 
 	void SaveWindowPos();
 

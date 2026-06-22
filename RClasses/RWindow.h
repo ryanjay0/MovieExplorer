@@ -240,6 +240,9 @@ protected:
 		case WM_MOUSEWHEEL:
 			pWnd->OnMouseWheel(LOWORD(wParam), HISHORT(wParam), LOSHORT(lParam), HISHORT(lParam));
 			return 0;
+		case WM_XBUTTONDOWN:
+			pWnd->OnXButtonDown(GET_XBUTTON_WPARAM(wParam), LOWORD(lParam), HIWORD(lParam));
+			return TRUE;
 		case WM_MOVE:
 			pWnd->OnMove(LOSHORT(lParam), HISHORT(lParam));
 			return 0;
@@ -438,6 +441,13 @@ protected:
 	{
 		UNREFERENCED_PARAMETER(keys);
 		UNREFERENCED_PARAMETER(delta);
+		UNREFERENCED_PARAMETER(x);
+		UNREFERENCED_PARAMETER(y);
+	}
+
+	void OnXButtonDown(WORD xButton, short x, short y)
+	{
+		UNREFERENCED_PARAMETER(xButton);
 		UNREFERENCED_PARAMETER(x);
 		UNREFERENCED_PARAMETER(y);
 	}

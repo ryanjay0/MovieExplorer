@@ -23,6 +23,6 @@ protected:
 	RComboBox m_cbOnlyUse, m_cbTitle, m_cbYear, m_cbGenres, m_cbCountries, m_cbRuntime, 
 			m_cbStoryline, m_cbDirectors, m_cbWriters, m_cbStars, m_cbPoster, m_cbRating;
 	REdit m_eIndexExtensions, m_eMaxInfoAge, m_eOMDbAPIKey;
-	RButton m_grpDatabase, m_grpInfoService, m_chkIndexDirectories;
+	RButton m_grpDatabase, m_grpInfoService, m_chkIndexDirectories, m_btnRecheckFailed;
 	bool m_bInitialized;
 };

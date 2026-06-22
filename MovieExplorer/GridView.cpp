@@ -81,7 +81,7 @@ void CGridView::OnScaleChanged()
 
 	// Calculate required column width
 
-	m_nColumns = (m_mdc.cx - SCX(30)) / SCX(200);
+	m_nColumns = (m_mdc.cx - SCX(30)) / SCX(200) + 1;
 
 	Draw();
 }
@@ -102,7 +102,7 @@ void CGridView::OnSize(DWORD type, WORD cx, WORD cy)
 	if (cx == 0 || cy == 0)
 		return;
 
-	m_nColumns = (m_mdc.cx - SCX(30)) / SCX(200);
+	m_nColumns = (m_mdc.cx - SCX(30)) / SCX(200) + 1;
 
 	Draw();
 }

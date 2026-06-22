@@ -149,6 +149,33 @@ void CMainWnd::OnClose()
 	PostQuitMessage(0);
 }
 
+void CMainWnd::OnXButtonDown(WORD xButton, short x, short y)
+{
+	UNREFERENCED_PARAMETER(x);
+	UNREFERENCED_PARAMETER(y);
+
+	if (xButton == XBUTTON1 && m_bListView)
+	{
+		m_bListView = false;
+		MoveWindow(m_listView, 0, 0, 0, 0);
+		SetFocus(m_gridView);
+		RECT rc;
+		GetClientRect(m_hWnd, &rc);
+		OnSize(0, (WORD)rc.right, (WORD)rc.bottom);
+		PostChildrenRec(m_hWnd, WM_PAINT);
+	}
+	else if (xButton == XBUTTON2 && !m_bListView)
+	{
+		m_bListView = true;
+		MoveWindow(m_gridView, 0, 0, 0, 0);
+		SetFocus(m_listView);
+		RECT rc;
+		GetClientRect(m_hWnd, &rc);
+		OnSize(0, (WORD)rc.right, (WORD)rc.bottom);
+		PostChildrenRec(m_hWnd, WM_PAINT);
+	}
+}
+
 void CMainWnd::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 {
 	UNREFERENCED_PARAMETER(notifyCode);

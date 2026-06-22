@@ -174,6 +174,7 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 			!m_stcMaxInfoAge.Create<RStatic>(m_hWnd) ||
 			!m_eOMDbAPIKey.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP, WS_EX_CLIENTEDGE) ||
 			!m_stcOMDbAPIKey.Create<RStatic>(m_hWnd) ||
+			!m_btnRecheckFailed.Create<RButton>(m_hWnd, WS_TABSTOP) ||
 			!m_grpDatabase.Create<RButton>(m_hWnd, BS_GROUPBOX) ||
 
 			!m_cbOnlyUse.Create<RComboBox>(m_hWnd, cbStyle) ||
@@ -299,7 +300,7 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	UNREFERENCED_PARAMETER(type);
 	UNREFERENCED_PARAMETER(cy);
 	int y = DUY(4);
-	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(86));
+	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(102));
 	y += DUY(12);
 	MoveWindow(m_stcIndexExtensions, DUX(14), y, DUX(200), DUY(10));
 	y += DUY(11);
@@ -312,8 +313,10 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	y += DUY(16);
 	MoveStatic(m_stcOMDbAPIKey, DUX(14), y+DUY(2));
 	MoveWindow(m_eOMDbAPIKey, DUX(14) + m_stcOMDbAPIKey.GetWidth() + DUX(4), y, cx - DUX(28) - m_stcOMDbAPIKey.GetWidth() - DUX(4), DUY(12));
+	y += DUY(16);
+	MoveWindow(m_btnRecheckFailed, DUX(14), y, DUX(80), DUY(12));
 
-	y = DUY(96);
+	y = DUY(112);
 	MoveWindow(m_grpInfoService, DUX(4), y, cx - DUX(8), DUY(112));
 	y += DUY(12);
 	MoveWindow(m_stcOnlyUse, DUX(14), y+DUY(1)+1, DUX(60), DUY(10));
@@ -359,6 +362,7 @@ void CDatabasePage::OnPrefChanged()
 	m_chkIndexDirectories.SetText(_T(" ") + GETSTR(IDS_INDEXDIRECTORIES));
 	m_stcMaxInfoAge.SetText(GETSTR(IDS_MAXINFOAGE) + _T(":"));
 	m_stcOMDbAPIKey.SetText(_T("OMDb API Key:"));
+	m_btnRecheckFailed.SetText(_T("Recheck Failed"));
 	m_grpDatabase.SetText(GETSTR(IDS_DATABASE));
 
 	m_stcOnlyUse.SetText(GETSTR(IDS_ONLYUSE) + _T(":"));
@@ -425,6 +429,32 @@ void CDatabasePage::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 
 	if (notifyCode == CBN_SELENDOK || notifyCode == BN_CLICKED || notifyCode == EN_CHANGE)
 	{
+		if (notifyCode == BN_CLICKED && hWndControl == m_btnRecheckFailed)
+		{
+			INT_PTR nCount = 0;
+			foreach (GetDB()->m_categories, cat)
+				foreach (cat.directories, dir)
+					foreach (dir.movies, mov)
+					{
+						if (mov.strIMDbID == _T("unknown") || mov.strIMDbID == _T("connError") ||
+							mov.strIMDbID == _T("scrapeError") || mov.strIMDbID == _T("rateLimited"))
+						{
+							mov.strIMDbID.Empty();
+							mov.bUpdated = false;
+							nCount++;
+						}
+					}
+			if (nCount > 0)
+			{
+				RString strMsg = NumberToString(nCount) + _T(" movie") + (nCount > 1 ? _T("s") : _T("")) + _T(" queued for re-check.");
+				MessageBox(m_hWnd, strMsg, _T("Recheck Failed"), MB_OK|MB_ICONINFORMATION);
+				GetDB()->Update();
+			}
+			else
+				MessageBox(m_hWnd, _T("No failed movies to recheck."), _T("Recheck Failed"), MB_OK|MB_ICONINFORMATION);
+			return;
+		}
+
 		SetChanged();
 
 		if (hWndControl == m_cbOnlyUse)

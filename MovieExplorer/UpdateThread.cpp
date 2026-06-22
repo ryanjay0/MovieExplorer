@@ -108,7 +108,10 @@ UINT CALLBACK UpdateThread(void *pParam)
 			if (!strID.IsEmpty())
 			{
 				RString strCacheFile = GetCacheFileName(strCacheDir, strServ, strID, nSeason, nEpisode);
-				if (xmlFile.Read(strCacheFile + _T(".xml")))
+				bool bCacheRead = (xmlFile.Read(strCacheFile + _T(".xml")) != 0);
+				if (!bCacheRead && nSeason >= 0 && nEpisode >= 0)
+					bCacheRead = (xmlFile.Read(strCacheDir + _T("\\") + strServ + _T("\\") + strID + _T(".xml")) != 0);
+				if (bCacheRead)
 				{
 					pInfoTag = xmlFile.GetRootTag()->GetChild(_T("MovieInfo"));
 					if (pInfoTag)
