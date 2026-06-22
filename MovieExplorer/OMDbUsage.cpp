@@ -12,9 +12,15 @@ RString OMDbUsageTracker::TodayString()
 {
 	SYSTEMTIME st;
 	GetLocalTime(&st);
-	RString str;
-	str.Format(_T("%04d-%02d-%02d"), st.wYear, st.wMonth, st.wDay);
-	return str;
+
+	RString strYear = NumberToString((INT_PTR)st.wYear);
+	RString strMonth = NumberToString((INT_PTR)st.wMonth);
+	RString strDay = NumberToString((INT_PTR)st.wDay);
+
+	if (strMonth.GetLength() == 1) strMonth = _T("0") + strMonth;
+	if (strDay.GetLength() == 1) strDay = _T("0") + strDay;
+
+	return strYear + _T("-") + strMonth + _T("-") + strDay;
 }
 
 void OMDbUsageTracker::CheckDateReset()

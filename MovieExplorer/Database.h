@@ -123,6 +123,7 @@ public:
 
 	RArray<DBMOVIE*> m_movies;
 	RObArray<DBCATEGORY> m_categories;
+	OMDbUsageTracker m_usageTracker;
 
 protected:
 	LRESULT WndProc(UINT Msg, WPARAM wParam, LPARAM lParam);
@@ -138,5 +139,4 @@ protected:
 	bool m_bShowSeenMovies, m_bShowHiddenMovies, m_bSearchStoryline, m_bShowOnlyTV, m_bShowOnlyMovies;
 	UINT_PTR m_sortBy;
 	SeriesDedup m_seriesDedup;
-	OMDbUsageTracker m_usageTracker;
 };
