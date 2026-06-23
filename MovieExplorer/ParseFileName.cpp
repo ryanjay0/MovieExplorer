@@ -99,7 +99,8 @@ void ParseFileName(RString_ strFileName, RString_ strFullPath, RString &strTitle
 
 					if (bPartOfYear)
 					{
-						strResult += _T(' ');
+						TCHAR sz[2] = { _T(' '), 0 };
+						strResult += sz;
 					}
 					else
 					{
@@ -113,17 +114,20 @@ void ParseFileName(RString_ strFileName, RString_ strFullPath, RString &strTitle
 
 						if (nBeforeLen <= 2 && nAfterLen <= 2)
 						{
-							strResult += _T(':');
+							TCHAR sz[2] = { _T(':'), 0 };
+							strResult += sz;
 						}
 						else
 						{
-							strResult += _T(' ');
+							TCHAR sz[2] = { _T(' '), 0 };
+							strResult += sz;
 						}
 					}
 				}
 				else
 				{
-					strResult += _T(' ');
+					TCHAR sz[2] = { _T(' '), 0 };
+					strResult += sz;
 				}
 			}
 			else
