@@ -68,7 +68,10 @@ UINT CALLBACK UpdateThread(void *pParam)
 	while (SendMessage(hDatabaseWnd, DBM_GETMOVIEUPDATE, (WPARAM)&mov, (LPARAM)&pOrigMov))
 	{
 		nSeason = -1; nEpisode = -1; strAirDate.Empty(); bType = DB_TYPE_UNKNOWN;
-		ParseFileName(mov.strFileName, strSearchTitle, strSearchYear, nSeason, nEpisode, strAirDate, bType);
+		RString strFullPath;
+		if (mov.pDirectory)
+			strFullPath = mov.pDirectory->strPath + _T("\\") + mov.strFileName;
+		ParseFileName(mov.strFileName, strFullPath, strSearchTitle, strSearchYear, nSeason, nEpisode, strAirDate, bType);
 
 		if (bRateLimited)
 		{

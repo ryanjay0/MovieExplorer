@@ -209,6 +209,91 @@ static RString TryApostropheVariants(RString strTitle)
 	return strResult;
 }
 
+static RString TryTrailingSApostrophe(RString strTitle)
+{
+	static const RString strExclusions[] = {
+		_T("is"), _T("was"), _T("has"), _T("his"), _T("us"), _T("its"),
+		_T("yes"), _T("bus"), _T("gas"), _T("thus"), _T("as"), _T("ms"),
+		_T("mrs"), _T("vs"), _T("this"), _T("news"), _T("always"),
+		_T("times"), _T("games"), _T("lives"), _T("loves"), _T("moves"),
+		_T("comes"), _T("makes"), _T("takes"), _T("gives"), _T("goes"),
+		_T("does"), _T("says"), _T("gets"), _T("puts"), _T("sees"),
+		_T("seems"), _T("needs"), _T("keeps"), _T("lets"), _T("begins"),
+		_T("looks"), _T("shows"), _T("knows"), _T("calls"), _T("finds"),
+		_T("wants"), _T("tells"), _T("asks"), _T("works"), _T("feels"),
+		_T("tries"), _T("leaves"), _T("means"), _T("years"), _T("days"),
+		_T("ways"), _T("things"), _T("world"), _T("girls"), _T("boys"),
+		_T("kids"), _T("friends"), _T("parents"), _T("streets"), _T("dogs"),
+		_T("cats"), _T("teens"), _T("nights"), _T("days"), _T("rights"),
+		_T("ways"), _T("thoughts"), _T("doors"), _T("rooms"), _T("stars"),
+		_T("eyes"), _T("hands"), _T("cars"), _T("woods"), _T("waters"),
+		_T("hills"), _T("ends"), _T("turns"), _T("runs"), _T("falls"),
+		_T("kills"), _T("hells"), _T("skies"), _T("lies"), _T("dies"),
+		_T("class"), _T("mass"), _T("pass"), _T("boss"), _T("loss"),
+		_T("cross"), _T("across"), _T("glass"), _T("grass"), _T("press"),
+		_T("dress"), _T("address"), _T("success"), _T("process"), _T("access"),
+		_T("series"), _T("species"), _T("status"), _T("campus"), _T("focus"),
+		_T("virus"), _T("census"), _T("corpus"), _T("plus"), _T("minus"),
+		_T("genus"), _T("radius"), _T("stimulus"), _T("nexus"), _T("surplus"),
+		_T("bonus"), _T("menus"), _T("sinus"), _T("mucus"), _T("nucleus"),
+		_T("videos"), _T("studios"), _T("radios"), _T("patios"), _T("rios"),
+		_T("arios"), _T("marios"), _T("emilios"), _T("julios"),
+		_T("abbotts"), _T("smittys"), _T("buddys")
+	};
+
+	RString strResult = strTitle;
+	bool bModified = false;
+
+	INT_PTR nStart = 0;
+	while (nStart < strResult.GetLength())
+	{
+		INT_PTR nEnd = strResult.Find(_T(' '), nStart);
+		if (nEnd == -1)
+			nEnd = strResult.GetLength();
+
+		INT_PTR nWordLen = nEnd - nStart;
+		if (nWordLen >= 3)
+		{
+			TCHAR chLast = strResult[nEnd - 1];
+			if (chLast == _T('s') || chLast == _T('S'))
+			{
+				TCHAR chBeforeLast = strResult[nEnd - 2];
+				if (chBeforeLast != _T('\'') && chBeforeLast != _T('S') && chBeforeLast != _T('s'))
+				{
+					bool bIsLetter = ((chBeforeLast >= _T('a') && chBeforeLast <= _T('z')) ||
+						(chBeforeLast >= _T('A') && chBeforeLast <= _T('Z')));
+					if (bIsLetter)
+					{
+						RString strWord = strResult.Mid(nStart, nWordLen);
+						strWord.MakeLower();
+
+						bool bExcluded = false;
+						for (INT_PTR ei = 0; ei < sizeof(strExclusions) / sizeof(strExclusions[0]); ++ei)
+						{
+							if (strWord == strExclusions[ei])
+							{
+								bExcluded = true;
+								break;
+							}
+						}
+
+						if (!bExcluded)
+						{
+							strResult = strResult.Left(nEnd - 1) + _T("'") + strResult.Mid(nEnd - 1);
+							bModified = true;
+							nEnd++;
+						}
+					}
+				}
+			}
+		}
+
+		nStart = nEnd + 1;
+	}
+
+	return bModified ? strResult : strTitle;
+}
+
 static RString TryStripCountrySuffix(RString strTitle)
 {
 	static const RString strSuffixes[] = {
@@ -316,6 +401,26 @@ DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey, std::map<RString, SeriesC
 				if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
 				{
 					nSearchResult = OMDbSearch(strOMDbAPIKey, strApostrophe, RString(), pInfo->bType, strBestID, pUsage);
+					if (nSearchResult == DBI_STATUS_RATELIMITED)
+						return DBI_STATUS_RATELIMITED;
+					bFound = (nSearchResult == DBI_STATUS_UPDATED);
+				}
+			}
+		}
+
+		if (!bFound)
+		{
+			RString strTrailingS = TryTrailingSApostrophe(pInfo->strSearchTitle);
+			if (strTrailingS != pInfo->strSearchTitle)
+			{
+				nSearchResult = OMDbSearch(strOMDbAPIKey, strTrailingS, pInfo->strSearchYear, pInfo->bType, strBestID, pUsage);
+				if (nSearchResult == DBI_STATUS_RATELIMITED)
+					return DBI_STATUS_RATELIMITED;
+				bFound = (nSearchResult == DBI_STATUS_UPDATED);
+
+				if (!bFound && !pInfo->strSearchYear.IsEmpty() && pInfo->bType != DB_TYPE_TV)
+				{
+					nSearchResult = OMDbSearch(strOMDbAPIKey, strTrailingS, RString(), pInfo->bType, strBestID, pUsage);
 					if (nSearchResult == DBI_STATUS_RATELIMITED)
 						return DBI_STATUS_RATELIMITED;
 					bFound = (nSearchResult == DBI_STATUS_UPDATED);
