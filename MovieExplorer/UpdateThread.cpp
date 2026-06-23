@@ -75,7 +75,6 @@ UINT CALLBACK UpdateThread(void *pParam)
 
 		if (bRateLimited)
 		{
-			mov.bUpdated = true;
 			SendMessage(hDatabaseWnd, DBM_SETMOVIEUPDATE, (WPARAM)&mov, (LPARAM)pOrigMov);
 			continue;
 		}
@@ -183,7 +182,8 @@ UINT CALLBACK UpdateThread(void *pParam)
 				{
 					LOG(_T("OMDb API rate limit reached. Stopping web updates.\n"));
 					bRateLimited = true;
-					strID = _T("rateLimited");
+					if (strID.IsEmpty() || (strID.GetLength() < 2 || strID.Left(2) != _T("tt")))
+						strID = _T("rateLimited");
 					break;
 				}
 
@@ -306,7 +306,8 @@ UINT CALLBACK UpdateThread(void *pParam)
 				ASSERT(false);
 		}
 
-		mov.bUpdated = true;
+		if (!bRateLimited)
+			mov.bUpdated = true;
 
 		if (PeekMessage(&msg, NULL, WM_QUIT, WM_QUIT, PM_NOREMOVE))
 			return 0;

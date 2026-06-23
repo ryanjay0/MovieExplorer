@@ -102,9 +102,13 @@ void CEditDlg::OnSizing(DWORD side, RECT *pRect)
 
 void CEditDlg::OnOK()
 {
-	if (m_pMov->strIMDbID != m_eIMDb.GetText() ||
-			m_pMov->strMovieMeterID != m_eMovieMeter.GetText())
+	bool bIDChanged = (m_pMov->strIMDbID != m_eIMDb.GetText() ||
+			m_pMov->strMovieMeterID != m_eMovieMeter.GetText());
+
+	if (bIDChanged)
 	{
+		GetDB()->CancelUpdate();
+
 		m_pMov->fIMDbRating = m_pMov->fIMDbRatingMax = 0.0f;
 		m_pMov->fRating = m_pMov->fRatingMax = 0.0f;
 		m_pMov->nMetascore = -1;
@@ -127,6 +131,9 @@ void CEditDlg::OnOK()
 	m_pMov->strMovieMeterID = m_eMovieMeter.GetText();
 	m_pMov->bSeen = m_chkSeenMovie.GetCheck();
 	m_pMov->bHide = m_chkHideMovie.GetCheck();
+
+	if (bIDChanged)
+		m_pMov->bUpdated = false;
 
 	GetDB()->Update(m_pMov);
 
