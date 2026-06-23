@@ -45,7 +45,7 @@ void ParseFileName(RString_ strFileName, RString_ strFullPath, RString &strTitle
 	strTitle.Replace(_T('['), _T('('));
 	strTitle.Replace(_T(']'), _T(')'));
 	strTitle.Replace(_T('{'), _T('('));
-	strTitle.Replace(_T('}'), _T(')'');
+	strTitle.Replace(_T('}'), _T(')'));
 
 	/*
 	// replace anything not ,()0-9a-zA-Z by a space
