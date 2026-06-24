@@ -8,7 +8,7 @@ static DWORD g_tmdbLastRequest = 0;
 
 static void TMDBThrottle()
 {
-	RLock lock(g_tmdbCS);
+	RLock lock(&g_tmdbCS);
 	DWORD now = GetTickCount();
 	DWORD elapsed = now - g_tmdbLastRequest;
 	if (elapsed < 30)
@@ -37,9 +37,9 @@ static int TMDBPickBestResult(JsonDoc &doc, RString strSearchTitle, RString strS
 {
 	int resultsIdx;
 	if (bIsTV)
-		resultsIdx = doc.ArrAt(L"results", -1);
+		resultsIdx = doc.GetArrAt(L"results", -1);
 	else
-		resultsIdx = doc.ArrAt(L"results", -1);
+		resultsIdx = doc.GetArrAt(L"results", -1);
 	if (resultsIdx < 0) return 0;
 
 	int count = doc.NCount(resultsIdx);
@@ -58,11 +58,11 @@ static int TMDBPickBestResult(JsonDoc &doc, RString strSearchTitle, RString strS
 		std::wstring titleKey = bIsTV ? L"name" : L"title";
 		std::wstring dateKey = bIsTV ? L"first_air_date" : L"release_date";
 
-		RString strTitle = doc.NS(itemIdx, titleKey).c_str();
-		RString strDate = doc.NS(itemIdx, dateKey).c_str();
-		int nID = doc.NI(itemIdx, L"id", 0);
-		double dVote = doc.ND(itemIdx, L"vote_average", 0);
-		double dPop = doc.ND(itemIdx, L"popularity", 0);
+		RString strTitle = doc.NGetStr(itemIdx, titleKey).c_str();
+		RString strDate = doc.NGetStr(itemIdx, dateKey).c_str();
+		int nID = doc.NGetInt(itemIdx, L"id", 0);
+		double dVote = doc.NGetDbl(itemIdx, L"vote_average", 0);
+		double dPop = doc.NGetDbl(itemIdx, L"popularity", 0);
 
 		RString strLowerTitle = strTitle;
 		strLowerTitle.MakeLower();
@@ -128,7 +128,7 @@ static int TMDBSearch(RString strAPIKey, RString strTitle, RString strYear, BYTE
 	if (!TMDBRequest(strURL, doc))
 		return DBI_STATUS_CONNERROR;
 
-	int nCount = doc.ArrLen(L"results");
+	int nCount = doc.GetArrLen(L"results");
 	if (nCount == 0)
 		return DBI_STATUS_UNKNOWN;
 
@@ -152,19 +152,19 @@ static int TMDBFindByIMDbID(RString strAPIKey, RString strIMDbID, BYTE bType, RS
 
 	if (bType == DB_TYPE_TV)
 	{
-		int arrIdx = doc.ArrAt(L"tv_results", -1);
+		int arrIdx = doc.GetArrAt(L"tv_results", -1);
 		if (arrIdx < 0 || doc.NCount(arrIdx) == 0) return DBI_STATUS_UNKNOWN;
 		int itemIdx = doc.NAt(arrIdx, 0);
 		if (itemIdx < 0) return DBI_STATUS_UNKNOWN;
-		strBestID = NumberToString(doc.NI(itemIdx, L"id", 0));
+		strBestID = NumberToString(doc.NGetInt(itemIdx, L"id", 0));
 	}
 	else
 	{
-		int arrIdx = doc.ArrAt(L"movie_results", -1);
+		int arrIdx = doc.GetArrAt(L"movie_results", -1);
 		if (arrIdx < 0 || doc.NCount(arrIdx) == 0) return DBI_STATUS_UNKNOWN;
 		int itemIdx = doc.NAt(arrIdx, 0);
 		if (itemIdx < 0) return DBI_STATUS_UNKNOWN;
-		strBestID = NumberToString(doc.NI(itemIdx, L"id", 0));
+		strBestID = NumberToString(doc.NGetInt(itemIdx, L"id", 0));
 	}
 
 	return strBestID.IsEmpty() ? DBI_STATUS_UNKNOWN : DBI_STATUS_UPDATED;
@@ -175,48 +175,48 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 	std::wstring titleKey = bIsTV ? L"name" : L"title";
 	std::wstring dateKey = bIsTV ? L"first_air_date" : L"release_date";
 
-	pInfo->strTitle = doc.S(titleKey).c_str();
-	pInfo->strYear = doc.S(dateKey).c_str();
+	pInfo->strTitle = doc.GetStr(titleKey).c_str();
+	pInfo->strYear = doc.GetStr(dateKey).c_str();
 
-	RString strPosterPath = doc.S(L"poster_path").c_str();
+	RString strPosterPath = doc.GetStr(L"poster_path").c_str();
 	if (!strPosterPath.IsEmpty())
 	{
 		RString strPosterURL = TMDBImageURL(strPosterPath, _T("w500"));
 		URLToData(strPosterURL, pInfo->posterData);
 	}
 
-	pInfo->fRating = (float)doc.D(L"vote_average", 0);
+	pInfo->fRating = (float)doc.GetDbl(L"vote_average", 0);
 	pInfo->fRatingMax = 10.0f;
-	pInfo->nVotes = doc.I(L"vote_count", 0);
+	pInfo->nVotes = doc.GetInt(L"vote_count", 0);
 
-	pInfo->strStoryline = doc.S(L"overview").c_str();
+	pInfo->strStoryline = doc.GetStr(L"overview").c_str();
 
 	if (!bIsTV)
 	{
-		pInfo->nRuntime = doc.I(L"runtime", 0);
-		pInfo->strIMDbID = doc.S(L"imdb_id").c_str();
+		pInfo->nRuntime = doc.GetInt(L"runtime", 0);
+		pInfo->strIMDbID = doc.GetStr(L"imdb_id").c_str();
 	}
 	else
 	{
-		int epRuntime = doc.I(L"episode_run_time", 0);
+		int epRuntime = doc.GetInt(L"episode_run_time", 0);
 		if (epRuntime == 0)
 		{
-			int arrIdx = doc.ArrAt(L"episode_run_time", -1);
+			int arrIdx = doc.GetArrAt(L"episode_run_time", -1);
 			if (arrIdx >= 0 && doc.NCount(arrIdx) > 0)
-				epRuntime = doc.NI(doc.NAt(arrIdx, 0), L"", 0);
+				epRuntime = doc.NGetInt(doc.NAt(arrIdx, 0), L"", 0);
 		}
 		pInfo->nRuntime = epRuntime;
 
 		int extIdx = doc.FindKey(doc.RootIdx(), L"external_ids");
 		if (extIdx >= 0)
-			pInfo->strIMDbID = doc.NS(extIdx, L"imdb_id").c_str();
+			pInfo->strIMDbID = doc.NGetStr(extIdx, L"imdb_id").c_str();
 	}
 
 	if (pInfo->strYear.Find(_T('-')) == 4)
 		pInfo->strYear = pInfo->strYear.Left(4);
 
 	RString strGenres;
-	int genresIdx = doc.ArrAt(L"genres", -1);
+	int genresIdx = doc.GetArrAt(L"genres", -1);
 	if (genresIdx >= 0)
 	{
 		int gCount = doc.NCount(genresIdx);
@@ -224,7 +224,7 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 		{
 			int gIdx = doc.NAt(genresIdx, i);
 			if (gIdx < 0) continue;
-			RString strG = doc.NS(gIdx, L"name").c_str();
+			RString strG = doc.NGetStr(gIdx, L"name").c_str();
 			if (!strG.IsEmpty())
 			{
 				if (!strGenres.IsEmpty()) strGenres += _T("|");
@@ -235,7 +235,7 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 	pInfo->strGenres = strGenres;
 
 	RString strCountries;
-	int countriesIdx = doc.ArrAt(L"production_countries", -1);
+	int countriesIdx = doc.GetArrAt(L"production_countries", -1);
 	if (countriesIdx >= 0)
 	{
 		int cCount = doc.NCount(countriesIdx);
@@ -243,7 +243,7 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 		{
 			int cIdx = doc.NAt(countriesIdx, i);
 			if (cIdx < 0) continue;
-			RString strC = doc.NS(cIdx, L"name").c_str();
+			RString strC = doc.NGetStr(cIdx, L"name").c_str();
 			if (!strC.IsEmpty())
 			{
 				if (!strCountries.IsEmpty()) strCountries += _T("|");
@@ -258,7 +258,7 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 		int crIdx = doc.FindKey(doc.RootIdx(), L"content_ratings");
 		if (crIdx >= 0)
 		{
-			int resultsIdx = doc.NArrAt(crIdx, L"results", -1);
+			int resultsIdx = doc.NGetArrAt(crIdx, L"results", -1);
 			if (resultsIdx >= 0)
 			{
 				int rCount = doc.NCount(resultsIdx);
@@ -266,10 +266,10 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 				{
 					int rIdx = doc.NAt(resultsIdx, i);
 					if (rIdx < 0) continue;
-					RString iso = doc.NS(rIdx, L"iso_3166_1").c_str();
+					RString iso = doc.NGetStr(rIdx, L"iso_3166_1").c_str();
 					if (iso == _T("US"))
 					{
-						pInfo->strContentRating = doc.NS(rIdx, L"rating").c_str();
+						pInfo->strContentRating = doc.NGetStr(rIdx, L"rating").c_str();
 						break;
 					}
 				}
@@ -281,7 +281,7 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 		int rdIdx = doc.FindKey(doc.RootIdx(), L"release_dates");
 		if (rdIdx >= 0)
 		{
-			int resultsIdx = doc.NArrAt(rdIdx, L"results", -1);
+			int resultsIdx = doc.NGetArrAt(rdIdx, L"results", -1);
 			if (resultsIdx >= 0)
 			{
 				int rCount = doc.NCount(resultsIdx);
@@ -289,10 +289,10 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 				{
 					int rIdx = doc.NAt(resultsIdx, i);
 					if (rIdx < 0) continue;
-					RString iso = doc.NS(rIdx, L"iso_3166_1").c_str();
+					RString iso = doc.NGetStr(rIdx, L"iso_3166_1").c_str();
 					if (iso == _T("US"))
 					{
-						int datesIdx = doc.NArrAt(rIdx, L"release_dates", -1);
+						int datesIdx = doc.NGetArrAt(rIdx, L"release_dates", -1);
 						if (datesIdx >= 0)
 						{
 							int dCount = doc.NCount(datesIdx);
@@ -300,7 +300,7 @@ static void TMDBParseMovieDetails(JsonDoc &doc, DBINFO *pInfo, bool bIsTV)
 							{
 								int dIdx = doc.NAt(datesIdx, j);
 								if (dIdx < 0) continue;
-								RString cert = doc.NS(dIdx, L"certification").c_str();
+								RString cert = doc.NGetStr(dIdx, L"certification").c_str();
 								if (!cert.IsEmpty())
 								{
 									pInfo->strContentRating = cert;
@@ -324,7 +324,7 @@ static void TMDBParseCredits(JsonDoc &doc, DBINFO *pInfo)
 	RString strDirectors, strWriters, strStars;
 	RString strActorPaths[DBI_STAR_NUMBER];
 
-	int castIdx = doc.NArrAt(creditsIdx, L"cast", -1);
+	int castIdx = doc.NGetArrAt(creditsIdx, L"cast", -1);
 	if (castIdx >= 0)
 	{
 		int cCount = doc.NCount(castIdx);
@@ -333,13 +333,13 @@ static void TMDBParseCredits(JsonDoc &doc, DBINFO *pInfo)
 		{
 			int cIdx = doc.NAt(castIdx, i);
 			if (cIdx < 0) continue;
-			RString strName = doc.NS(cIdx, L"name").c_str();
+			RString strName = doc.NGetStr(cIdx, L"name").c_str();
 			if (strName.IsEmpty()) continue;
 			if (!strStars.IsEmpty()) strStars += _T("|");
 			strStars += strName;
 			if (nStarCount < DBI_STAR_NUMBER)
 			{
-				RString strPath = doc.NS(cIdx, L"profile_path").c_str();
+				RString strPath = doc.NGetStr(cIdx, L"profile_path").c_str();
 				strActorPaths[nStarCount] = strPath;
 				pInfo->strActorId[nStarCount] = strName;
 			}
@@ -347,7 +347,7 @@ static void TMDBParseCredits(JsonDoc &doc, DBINFO *pInfo)
 		}
 	}
 
-	int crewIdx = doc.NArrAt(creditsIdx, L"crew", -1);
+	int crewIdx = doc.NGetArrAt(creditsIdx, L"crew", -1);
 	if (crewIdx >= 0)
 	{
 		int cCount = doc.NCount(crewIdx);
@@ -355,9 +355,9 @@ static void TMDBParseCredits(JsonDoc &doc, DBINFO *pInfo)
 		{
 			int cIdx = doc.NAt(crewIdx, i);
 			if (cIdx < 0) continue;
-			RString strName = doc.NS(cIdx, L"name").c_str();
-			RString strJob = doc.NS(cIdx, L"job").c_str();
-			RString strDept = doc.NS(cIdx, L"department").c_str();
+			RString strName = doc.NGetStr(cIdx, L"name").c_str();
+			RString strJob = doc.NGetStr(cIdx, L"job").c_str();
+			RString strDept = doc.NGetStr(cIdx, L"department").c_str();
 
 			if (strJob == _T("Director"))
 			{
@@ -396,7 +396,7 @@ static void TMDBParseCredits(JsonDoc &doc, DBINFO *pInfo)
 
 static void TMDBParseSeason(JsonDoc &doc, DBINFO *pInfo, std::map<RString, SeriesCache> *pSeriesCache, RString strSeriesID)
 {
-	int epArrIdx = doc.ArrAt(L"episodes", -1);
+	int epArrIdx = doc.GetArrAt(L"episodes", -1);
 	if (epArrIdx < 0) return;
 
 	SeriesSeasonData seasonData;
@@ -407,11 +407,11 @@ static void TMDBParseSeason(JsonDoc &doc, DBINFO *pInfo, std::map<RString, Serie
 		int epIdx = doc.NAt(epArrIdx, i);
 		if (epIdx < 0) continue;
 
-		RString strEpName = doc.NS(epIdx, L"name").c_str();
-		RString strEpID = NumberToString(doc.NI(epIdx, L"id", 0));
-		RString strEpRating = FloatToString((float)doc.ND(epIdx, L"vote_average", 0));
-		RString strEpVotes = NumberToString(doc.NI(epIdx, L"vote_count", 0));
-		RString strEpAir = doc.NS(epIdx, L"air_date").c_str();
+		RString strEpName = doc.NGetStr(epIdx, L"name").c_str();
+		RString strEpID = NumberToString(doc.NGetInt(epIdx, L"id", 0));
+		RString strEpRating = FloatToString((float)doc.NGetDbl(epIdx, L"vote_average", 0));
+		RString strEpVotes = NumberToString(doc.NGetInt(epIdx, L"vote_count", 0));
+		RString strEpAir = doc.NGetStr(epIdx, L"air_date").c_str();
 
 		seasonData.episodeTitles.Add(strEpName);
 		seasonData.episodeIDs.Add(strEpID);

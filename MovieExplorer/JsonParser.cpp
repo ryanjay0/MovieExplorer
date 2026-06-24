@@ -222,33 +222,33 @@ int JsonDoc::FindKey(int objIdx, const std::wstring &key)
 	return -1;
 }
 
-std::wstring JsonDoc::S(const std::wstring &key, const std::wstring &def)
+std::wstring JsonDoc::GetStr(const std::wstring &key, const std::wstring &defVal)
 {
 	int idx = FindKey(m_root, key);
-	if (idx < 0 || m_pool[idx].type != JsonVal::String) return def;
+	if (idx < 0 || m_pool[idx].type != JsonVal::String) return defVal;
 	return m_pool[idx].str;
 }
 
-double JsonDoc::D(const std::wstring &key, double def)
+double JsonDoc::GetDbl(const std::wstring &key, double defVal)
 {
 	int idx = FindKey(m_root, key);
-	if (idx < 0 || m_pool[idx].type != JsonVal::Number) return def;
+	if (idx < 0 || m_pool[idx].type != JsonVal::Number) return defVal;
 	return m_pool[idx].num;
 }
 
-int JsonDoc::I(const std::wstring &key, int def)
+int JsonDoc::GetInt(const std::wstring &key, int defVal)
 {
-	return (int)D(key, def);
+	return (int)GetDbl(key, defVal);
 }
 
-int JsonDoc::ArrLen(const std::wstring &key)
+int JsonDoc::GetArrLen(const std::wstring &key)
 {
 	int idx = FindKey(m_root, key);
 	if (idx < 0 || m_pool[idx].type != JsonVal::Array) return 0;
 	return (int)m_pool[idx].children.size();
 }
 
-int JsonDoc::ArrAt(const std::wstring &key, int i)
+int JsonDoc::GetArrAt(const std::wstring &key, int i)
 {
 	int idx = FindKey(m_root, key);
 	if (idx < 0 || m_pool[idx].type != JsonVal::Array) return -1;
@@ -256,33 +256,33 @@ int JsonDoc::ArrAt(const std::wstring &key, int i)
 	return m_pool[idx].children[i];
 }
 
-std::wstring JsonDoc::NS(int idx, const std::wstring &key, const std::wstring &def)
+std::wstring JsonDoc::NGetStr(int idx, const std::wstring &key, const std::wstring &defVal)
 {
 	int v = FindKey(idx, key);
-	if (v < 0 || m_pool[v].type != JsonVal::String) return def;
+	if (v < 0 || m_pool[v].type != JsonVal::String) return defVal;
 	return m_pool[v].str;
 }
 
-double JsonDoc::ND(int idx, const std::wstring &key, double def)
+double JsonDoc::NGetDbl(int idx, const std::wstring &key, double defVal)
 {
 	int v = FindKey(idx, key);
-	if (v < 0 || m_pool[v].type != JsonVal::Number) return def;
+	if (v < 0 || m_pool[v].type != JsonVal::Number) return defVal;
 	return m_pool[v].num;
 }
 
-int JsonDoc::NI(int idx, const std::wstring &key, int def)
+int JsonDoc::NGetInt(int idx, const std::wstring &key, int defVal)
 {
-	return (int)ND(idx, key, def);
+	return (int)NGetDbl(idx, key, defVal);
 }
 
-int JsonDoc::NArrLen(int idx, const std::wstring &key)
+int JsonDoc::NGetArrLen(int idx, const std::wstring &key)
 {
 	int v = FindKey(idx, key);
 	if (v < 0 || m_pool[v].type != JsonVal::Array) return 0;
 	return (int)m_pool[v].children.size();
 }
 
-int JsonDoc::NArrAt(int idx, const std::wstring &key, int i)
+int JsonDoc::NGetArrAt(int idx, const std::wstring &key, int i)
 {
 	int v = FindKey(idx, key);
 	if (v < 0 || m_pool[v].type != JsonVal::Array) return -1;
