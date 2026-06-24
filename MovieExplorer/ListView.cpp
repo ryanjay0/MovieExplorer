@@ -136,27 +136,23 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 	else if (hWndControl == m_btnRefresh)
 	{
 		GetDB()->CancelUpdate();
-		if (!mov.strIMDbID.IsEmpty() && mov.strIMDbID[0] == _T('t'))
+
+		RString strCacheDir = CorrectPath(GETPREFSTR(_T("Database"), _T("CacheDirectory")));
+		if (!mov.strIMDbID.IsEmpty() && !strCacheDir.IsEmpty())
 		{
-			RString strCachePath = GetAppPath() + _T("Cache\\imdb.com\\") + mov.strIMDbID + _T(".xml");
-			DeleteFile(strCachePath);
-			if (!mov.strEpisodeID.IsEmpty())
-			{
-				RString strEpCachePath = GetAppPath() + _T("Cache\\imdb.com\\") + mov.strEpisodeID + _T(".xml");
-				DeleteFile(strEpCachePath);
-			}
+			RString strBase = strCacheDir + _T("\\imdb.com\\") + mov.strIMDbID;
+			DeleteFile(strBase + _T(".xml"));
+			if (mov.nSeason >= 0 && mov.nEpisode >= 0)
+				DeleteFile(strBase + _T("_S") + NumberToString(mov.nSeason) + _T("_E") + NumberToString(mov.nEpisode) + _T(".xml"));
 		}
-		if (!mov.strTMDBID.IsEmpty())
+		if (!mov.strTMDBID.IsEmpty() && !strCacheDir.IsEmpty())
 		{
-			RString strCachePath = GetAppPath() + _T("Cache\\tmdb.org\\") + mov.strTMDBID + _T(".xml");
-			DeleteFile(strCachePath);
-			if (!mov.strEpisodeID.IsEmpty())
-			{
-				RString strEpCachePath = GetAppPath() + _T("Cache\\tmdb.org\\") + mov.strTMDBID + _T("_S") +
-					NumberToString(mov.nSeason) + _T("_E") + NumberToString(mov.nEpisode) + _T(".xml");
-				DeleteFile(strEpCachePath);
-			}
+			RString strBase = strCacheDir + _T("\\tmdb.org\\") + mov.strTMDBID;
+			DeleteFile(strBase + _T(".xml"));
+			if (mov.nSeason >= 0 && mov.nEpisode >= 0)
+				DeleteFile(strBase + _T("_S") + NumberToString(mov.nSeason) + _T("_E") + NumberToString(mov.nEpisode) + _T(".xml"));
 		}
+
 		mov.strIMDbID.Empty();
 		mov.strTMDBID.Empty();
 		mov.strTitle.Empty();
@@ -174,12 +170,19 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 		mov.fRating = 0; mov.fRatingMax = 0;
 		mov.fIMDbRating = 0; mov.fIMDbRatingMax = 0;
 		mov.nVotes = 0; mov.nIMDbVotes = 0;
-		mov.nYear = 0; mov.nMetascore = 0;
-		mov.nSeason = 0; mov.nEpisode = 0;
-		mov.nRuntime = 0; mov.bType = 0;
+		mov.nYear = 0; mov.nMetascore = -1;
+		mov.nSeason = -1; mov.nEpisode = -1;
+		mov.nRuntime = 0; mov.bType = DB_TYPE_UNKNOWN;
+		mov.posterData.SetSize(0);
+		for (int i = 0; i < DBI_STAR_NUMBER; i++)
+		{
+			mov.strActorId[i].Empty();
+			mov.actorImageData[i] = NULL;
+		}
 		mov.bOMDbRatingsFetched = false;
 		mov.bUpdated = false;
-		GetDB()->Update();
+		GetDB()->Update(&mov);
+		PostMessage(GetMainWnd(), WM_DBUPDATED);
 		SetFocus(m_hWnd);
 	}
 	else if (hWndControl == m_btnEdit)

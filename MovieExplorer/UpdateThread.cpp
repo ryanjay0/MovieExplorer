@@ -103,9 +103,9 @@ UINT CALLBACK UpdateThread(void *pParam)
 			// Check dedup map for TV series search string -> series ID
 
 			RString strDedupKey;
-			if (strServ == _T("imdb.com") && strID.IsEmpty() && bType == DB_TYPE_TV)
+			if ((strServ == _T("imdb.com") || strServ == _T("tmdb.org")) && strID.IsEmpty() && bType == DB_TYPE_TV)
 			{
-				strDedupKey = strSearchTitle + _T("|") + strSearchYear + _T("|") + NumberToString(bType);
+				strDedupKey = strServ + _T("|") + strSearchTitle + _T("|") + strSearchYear + _T("|") + NumberToString(bType);
 				RString strFoundID;
 				if (pDedup)
 					strFoundID = pDedup->Lookup(strDedupKey);

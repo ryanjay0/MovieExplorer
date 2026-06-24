@@ -2,7 +2,7 @@
 
 ## Overview
 
-MovieExplorer is a native Win32 C++ application that catalogues movie and TV files on disk, fetches metadata from OMDb (Open Movie Database), and displays them in a grid or detail view with posters, ratings, and other info. It is a fork of `anlarke/MovieExplorer`, heavily modernized.
+MovieExplorer is a native Win32 C++ application that catalogues movie and TV files on disk, fetches metadata from TMDB (primary) and OMDb (ratings fallback), and displays them in a grid or detail view with posters, ratings, and other info. It is a fork of `anlarke/MovieExplorer`, heavily modernized.
 
 - **Language**: C++17 (compiled with MSVC v145 / VS 2026)
 - **Platform**: Windows 10+ (x86 and x64)
@@ -70,12 +70,12 @@ MovieExplorer/
 struct DBMOVIE {
     RString strFileName, strTitle, strYear, strGenres, strCountries;
     RString strContentRating, strStoryline, strDirectors, strWriters, strStars;
-    RString strIMDbID, strMovieMeterID;
+    RString strIMDbID, strTMDBID, strMovieMeterID;
     RString strEpisodeName, strEpisodeID, strAirDate;
     int nYear, nRuntime, nSeason, nEpisode, nVotes, nIMDbVotes, nMetascore;
     float fRating, fRatingMax, fIMDbRating, fIMDbRatingMax;
     BYTE bType; // DB_TYPE_UNKNOWN=0, DB_TYPE_MOVIE=1, DB_TYPE_TV=2
-    bool bHide, bSeen, bUpdated;
+    bool bHide, bSeen, bUpdated, bOMDbRatingsFetched;
     INT64 fileSize, fileTime, resumeTime;
     RArray<BYTE> posterData;
     RString strActorId[5]; // DBI_STAR_NUMBER=5
@@ -85,6 +85,8 @@ struct DBMOVIE {
 
 struct DBINFO { // Same fields as DBMOVIE plus search/status fields
     RString strSearchTitle, strSearchYear, strServiceName, strID;
+    RString strTMDBID, strIMDbID;
+    bool bOMDbRatingsFetched;
     BYTE status; // DBI_STATUS_NONE=0, UPDATED=1, UNKNOWN=2, CONNERROR=3, SCRAPEERROR=4, RATELIMITED=5
     UINT64 timestamp;
 };
@@ -101,11 +103,37 @@ struct DBCATEGORY {
 };
 ```
 
-## OMDb Integration
+## Data Sources
 
-### How It Works
+### TMDB (Primary)
 
-`ScrapeIMDb.cpp` handles all OMDb API communication. The flow for a single movie:
+`ScrapeTMDB.cpp` handles all TMDB API communication. TMDB is the default primary metadata source — it has no daily request cap, provides actor headshot images, and covers more titles than OMDb.
+
+**Flow for a single movie:**
+
+1. **Parse filename** → `ParseFileName.cpp` extracts title, year, season, episode from filename
+2. **ID resolution** (in priority order):
+   - If `strID` is already a numeric TMDB ID (not `tt...`), use it directly
+   - If `strIMDbID` starts with `tt`, call `/find/{imdb_id}?external_source=imdb_id` (migration path)
+   - Search by title+year via `/search/movie` or `/search/tv`
+   - Fallback: strip `" - <Genre>"` suffix, retry search without year
+3. **Fetch details** — `/movie/{id}?append_to_response=credits,release_dates` or `/tv/{id}?append_to_response=credits,content_ratings,external_ids`
+4. **Parse details** — title, year, poster (w500), vote_average, overview, genres (pipe-delimited), countries, content rating (US), runtime, IMDb ID
+5. **Parse credits** — directors, writers, stars (pipe-delimited), actor headshot images (w185)
+6. **For TV episodes** — season cache system (see below)
+7. **OMDb ratings fallback** — if `bOMDbRatingsFetched` is false, fetch IMDb rating + votes + Metascore from OMDb by IMDb ID
+
+**API key**: Stored in preferences as `TMDBAPIKey`. Free tier, no daily cap, 50 req/sec rate limit. A 30ms throttle (`TMDBThrottle()`) enforces minimum gap between requests.
+
+**Throttle**: `g_tmdbCS` (RCriticalSection) + `g_tmdbLastRequest` (GetTickCount) — 30ms minimum between TMDB requests.
+
+**"The/A" prefix normalization**: After fetching, `"The Matrix"` → `"Matrix, The"` and `"A Movie"` → `"Movie, A"` — same as ScrapeIMDb, for sort consistency.
+
+### OMDb (Ratings Fallback)
+
+`ScrapeIMDb.cpp` handles OMDb API communication. When TMDB is primary, OMDb is only called for IMDb ratings/votes/Metascore (via `TMDBFetchRatingsFromOMDb`). OMDb can also be used as the primary source if `OnlyUse=imdb.com`.
+
+**Flow for a single movie:**
 
 1. **Parse filename** → `ParseFileName.cpp` extracts title, year, season, episode from filename
 2. **Multi-strategy search** — tries in order:
@@ -116,36 +144,38 @@ struct DBCATEGORY {
    - "Part X" retry via `TryStripPart()` (e.g. "Fear Street Part 2" → "Fear Street 2" or "Fear Street")
 3. **OMDb search** — `http://www.omdbapi.com/?apikey=KEY&s=TITLE&y=YEAR&type=movie|series`
 4. **Pick best result** — `OMDbPickBestResult()` scores results by title similarity
-5. **Fetch details** — `http://www.omdbapi.com/?apikey=KEY&i=IMDB_ID&plot=full`
+5. **Fetch details** — `http://www.omdbapi.com/?apikey=KEY&i=IMDB_ID&plot=full&r=xml`
 6. **For TV episodes** — season cache system (see below)
 
-### API Key
+### API Keys
 
-Single key: `29a3b1d`. Stored in preferences as `OMDbAPIKey`. Free tier has daily request limits.
+| Key | Pref Name | Default | Notes |
+|-----|-----------|---------|-------|
+| TMDB | `TMDBAPIKey` | (empty) | Free, no daily cap, 50 req/sec |
+| OMDb | `OMDbAPIKey` | (empty) | Free tier = 1,000 req/day |
 
 ### Rate Limiting
 
-- OMDb returns an error containing "limit" when rate-limited
-- `OMDbIsRateLimited()` detects this
-- `DBI_STATUS_RATELIMITED` (5) is set, stored as `strIMDbID = "rateLimited"`
-- Update thread skips remaining movies when rate-limited
-- The "Recheck Failed" button can clear `rateLimited` status
+- **OMDb**: `OMDbUsageTracker` (daily count, persisted to `Cache/omdb_usage.txt`). Default limit 900 (100-request buffer). When hit → `DBI_STATUS_RATELIMITED` → `strID = "rateLimited"` → remaining movies skipped. The "Recheck Failed" button clears this.
+- **TMDB**: 30ms throttle between requests (in-memory, not persisted). No daily cap.
+- **`bOMDbRatingsFetched` flag**: Set to `true` only when OMDb returns a definitive answer (rating or "no data"). Stays `false` on rate-limit/connection error (will retry next cycle). Prevents infinite retry loop for movies with no OMDb ratings.
 
 ### Season Cache (TV Episodes)
 
-For TV shows, episodes share a series IMDb ID. The season cache system avoids per-episode API calls:
+For TV shows, episodes share a series ID. The season cache system avoids per-episode API calls:
 
-- **`SeriesDedup`** — shared across all update threads (member of `CDatabase`). Maps `"title|year|type"` → series IMDb ID. Avoids redundant searches.
-- **`SeriesCache`** — per-thread `std::map<RString, SeriesCache>`. When first episode of a season is fetched, the entire season is fetched in one OMDb call (`&i={id}&Season=N`), caching all episode data.
-- **`strEpisodeID`** — stored separately from `strID`/`strIMDbID`. Series ID is the primary key; episode ID goes to `strEpisodeID`. Prevents stale cache issues.
+- **`SeriesDedup`** — shared across all update threads (member of `CDatabase`). Maps `"service|title|year|type"` → series ID. Avoids redundant searches. Used for both `tmdb.org` and `imdb.com`.
+- **`SeriesCache`** — per-thread `std::map<RString, SeriesCache>`. When first episode of a season is fetched, the entire season is fetched in one call (OMDb `&Season=N` or TMDB `/tv/{id}/season/{n}`), caching all episode data.
+- **`strEpisodeID`** — stored separately from `strID`/`strIMDbID`/`strTMDBID`. Series ID is the primary key; episode ID goes to `strEpisodeID`. Prevents stale cache issues.
 
 ### Cache File Naming
 
-- **Movies**: `{cacheDir}\{service}\{id}.xml` (e.g. `Cache\imdb.com\tt1234567.xml`)
-- **TV episodes**: `{cacheDir}\{service}\{id}_S{n}_E{n}.xml` (e.g. `Cache\imdb.com\tt1234567_S1_E3.xml`)
+- **Movies**: `{cacheDir}\{service}\{id}.xml` (e.g. `Cache\tmdb.org\12345.xml` or `Cache\imdb.com\tt1234567.xml`)
+- **TV episodes**: `{cacheDir}\{service}\{id}_S{n}_E{n}.xml` (e.g. `Cache\tmdb.org\12345_S1_E3.xml`)
 - **Fallback**: If new-format `_S{n}_E{n}.xml` not found for TV, tries old format `{id}.xml` for backward compatibility
 - **Posters**: Always `{id}.jpg` (shared across episodes of same series)
 - **Actor images**: `{cacheDir}\{service}\actors\{name}.jpg`
+- **TMDB poster fallback**: If `tmdb.org\{id}.jpg` not found, tries `imdb.com\{id}.jpg`
 
 ### Cache XML Format
 
@@ -180,10 +210,29 @@ For TV shows, episodes share a series IMDb ID. The season cache system avoids pe
     <IMDbRating>8.7</IMDbRating>
     <IMDbRatingMax>10</IMDbRatingMax>
     <IMDbVotes>1234567</IMDbVotes>
+    <OMDbRatingsFetched>1</OMDbRatingsFetched>
     <Timestamp>133000000000000000</Timestamp>
   </MovieInfo>
 </ThemeFile>
 ```
+
+### JSON Parser
+
+`JsonParser.h/cpp` — minimal recursive descent JSON parser for TMDB responses. Pool-allocated `JsonVal` nodes (stable integer indices). Public API:
+
+| Method | Purpose |
+|--------|---------|
+| `Parse(const TCHAR*)` | Parse JSON string, return success |
+| `Root()` / `Node(idx)` | Get root or child `JsonVal*` |
+| `RootIdx()` | Get root node index |
+| `FindKey(objIdx, key)` | Find child node by key in an object → returns node index or -1 |
+| `GetStr/GetDbl/GetInt(key, def)` | Root-level scalar accessors |
+| `GetArrLen(key)` / `GetArrAt(key, i)` | Root-level array accessors |
+| `NGetStr/NGetDbl/NGetInt(idx, key, def)` | Node-level scalar accessors |
+| `NGetArrLen/NGetArrAt(idx, key, i)` | Node-level array accessors |
+| `NCount(idx)` / `NAt(idx, i)` | Array iteration (count + element index) |
+
+**Note**: `FindKey()` is the primitive for obtaining array node indices. Use `FindKey(doc.RootIdx(), key)` for root-level arrays, `FindKey(idx, key)` for nested arrays.
 
 ## Filename Parsing
 
@@ -206,6 +255,8 @@ Preferences stored in `Preferences.xml` alongside the exe. Managed by `RPreferen
 | (root) | LanguageFile | Languages\English.xml | UI language |
 | (root) | ThemeFile | Themes\Dark.xml | UI theme |
 | (root) | OMDbAPIKey | (empty) | OMDb API key |
+| (root) | TMDBAPIKey | (empty) | TMDB API key |
+| (root) | OMDbDailyLimit | 900 | OMDb daily request limit (buffer under 1000 cap) |
 | (root) | AutoCategories | true | Auto-add Movies/TV categories |
 | (root) | NormalizeRatings | false | Normalize ratings to 0-10 scale |
 | Database | DatabaseFile | Database.xml | Database XML file |
@@ -213,8 +264,8 @@ Preferences stored in `Preferences.xml` alongside the exe. Managed by `RPreferen
 | Database | IndexDirectories | true | Index directory names as movies |
 | Database | MaxInfoAge | 2 | Weeks before cache is considered stale |
 | Database | CacheDirectory | Cache | Cache folder for XML/poster data |
-| InfoService | OnlyUse | imdb.com | Use only this service (empty = combined) |
-| InfoService | Title/Year/Genres/etc. | imdb.com | Per-field service assignment |
+| InfoService | OnlyUse | tmdb.org | Use only this service (empty = combined) |
+| InfoService | Title/Year/Genres/etc. | tmdb.org | Per-field service assignment |
 | MainWnd | x, y, cx, cy | 150, 30, 950, 750 | Window position/size |
 | Search | Instantly | true | Search as you type |
 | Search | Literally | false | Literal search (no stemming) |
@@ -306,18 +357,18 @@ Workflow: `.github/workflows/build.yml`
 
 ## Error Status System
 
-Movies can have these status values stored in `strIMDbID`:
+Movies can have these status values stored in `strIMDbID` and/or `strTMDBID`:
 
-| Status | `strIMDbID` value | Meaning | Behavior |
-|--------|-------------------|---------|----------|
-| `DBI_STATUS_NONE` | (empty or IMDb ID) | Update in progress or pending | Will be updated |
-| `DBI_STATUS_UPDATED` | IMDb ID (e.g. `tt1234567`) | Successfully updated | Cache is valid |
-| `DBI_STATUS_UNKNOWN` | `unknown` | Movie not found on OMDb | Skipped on future updates |
+| Status | ID value | Meaning | Behavior |
+|--------|----------|---------|----------|
+| `DBI_STATUS_NONE` | (empty or valid ID) | Update in progress or pending | Will be updated |
+| `DBI_STATUS_UPDATED` | Valid ID (e.g. `tt1234567` or TMDB numeric) | Successfully updated | Cache is valid |
+| `DBI_STATUS_UNKNOWN` | `unknown` | Movie not found | Skipped on future updates |
 | `DBI_STATUS_CONNERROR` | `connError` | Network error | Skipped on future updates |
 | `DBI_STATUS_SCRAPEERROR` | `scrapeError` | Parse error in response | Skipped on future updates |
-| `DBI_STATUS_RATELIMITED` | `rateLimited` | OMDb rate limit hit | Skipped on future updates |
+| `DBI_STATUS_RATELIMITED` | `rateLimited` | API rate limit hit | Skipped on future updates |
 
-The "Recheck Failed" button (Database options page) clears `unknown`, `connError`, `scrapeError`, and `rateLimited` IDs and sets `bUpdated = false`, allowing the next update cycle to retry them.
+The "Recheck Failed" button (Database options page) clears `unknown`, `connError`, `scrapeError`, and `rateLimited` from both `strIMDbID` and `strTMDBID`, sets `bUpdated = false`, allowing the next update cycle to retry them.
 
 ## Navigation
 
@@ -378,13 +429,13 @@ Defined in `messages.h`:
     <Directory path="C:\Movies" computerName="DESKTOP-ABC">
       <File name="The Matrix (1999).mkv" size="1234567890" time="1234567890" 
             resumeTime="-1" seen="true" hide="false"
-            imdb.com="tt0133093" moviemeter.nl="" />
+            imdb.com="tt0133093" tmdb.org="603" moviemeter.nl="" />
     </Directory>
   </Category>
 </DatabaseFile>
 ```
 
-Note: `strEpisodeID` is NOT stored in the database file — it's only in the cache XML. The `strIMDbID` stores the series ID for TV shows.
+Note: `strEpisodeID` is NOT stored in the database file — it's only in the cache XML. The `strIMDbID` stores the series ID for TV shows, and `strTMDBID` stores the TMDB series ID.
 
 ## Important Implementation Details
 
@@ -447,13 +498,20 @@ All dimensions use `SCX()`/`SCY()` (scale) and `DUX()`/`DUY()` (dialog units) ma
 19. **Mouse back/forward** — XBUTTON1/2 navigate between grid and list views
 20. **Cache fallback** — Old-format cache files still readable for TV episodes
 21. **Dynamic linking** — Release builds use `/MD` to avoid Windows Defender false positives
+22. **TMDB integration** — TMDB as primary metadata source with OMDb for ratings only; `JsonParser` for JSON responses; `strTMDBID` + `bOMDbRatingsFetched` fields; `/find/{imdb_id}` migration path; 30ms throttle; actor headshot images; TMDB attribution label
+23. **OMDb usage tracker** — Daily request counter (default limit 900), persisted to `Cache/omdb_usage.txt`, auto-resets on date change, "Used: X/Y today" display on Database page
+24. **Resume/VLC integration** — Launch VLC with `--start-time`, snapshot-on-close resume position reading, auto-mark seen at 95%
+25. **Refresh toolbar button** — One-click re-fetch: deletes cache XMLs + clears metadata + `bUpdated=false`
+26. **Colored progress bar** — Resume progress shown as colored bar (green/yellow/text) with percentage in ListView
+27. **Sort label renames** — Intuitive labels ("Title (A-Z)" not "Title / Title (descending)"); default sort changed to File Time Descending
+28. **Dark theme scrollbar** — Custom dark scrollbar palette in `CorrectThemes.cpp`; light theme uses Windows default
+29. **Metadata in database XML** — `<MovieInfo>` child element on each `<File>` makes DB self-contained for text data
 
 ### What Still Needs Work
 
-- **Parent directory fallback** — When filename is garbage, try directory name as movie title. Requires plumbing full path through to `ScrapeIMDb`.
+- **Parent directory fallback** — When filename is garbage, try directory name as movie title. Requires plumbing full path through to scraper.
 - **Strip genre tags after " - "** — Risky, needs careful handling to avoid removing real title text.
 - **Strip leading track numbers** — Risky because "P2" and "M3GAN" are real titles.
-- **TMDB as second data source** — Some movies exist on IMDb but not in OMDb. Would require another API key and integration.
 - **System theme option** — Auto-detect Windows dark/light mode preference. Currently just defaults to Dark.
 
 ## Common Gotchas
@@ -468,3 +526,8 @@ All dimensions use `SCX()`/`SCY()` (scale) and `DUX()`/`DUY()` (dialog units) ma
 8. **`CorrectThemes` also uses `false` parameter** — Same pattern. Theme files are updated with new entries but existing customizations are preserved.
 9. **Cache timestamp is in 100-nanosecond intervals** — `GetSystemTime()` returns FILETIME-style timestamp. `MaxInfoAge` (weeks) × 7 × 24 × 60 × 60 × 10000000 = maxTimeDiff.
 10. **`DBM_GETMOVIEUPDATE` drives the update loop** — Each TV episode is a separate entry in the update queue.
+11. **`JsonDoc::GetArrAt(key, i)` returns element at index i** — NOT the array node index. Use `FindKey(rootIdx, key)` to get array node indices for iteration. This was a critical bug that silently broke all array parsing in ScrapeTMDB.
+12. **`JsonDoc` method names avoid single letters** — `S`, `D`, `I` etc. collide with Windows macros. Use `GetStr`, `GetDbl`, `GetInt` etc.
+13. **`SeriesDedup` key includes service name** — Key format is `"service|title|year|type"` to avoid cross-service ID collision (IMDb `tt...` vs TMDB numeric).
+14. **`bOMDbRatingsFetched` only set on definitive answer** — `true` on OMDb success or "no data" response; stays `false` on rate-limit/connection error to allow retry.
+15. **TMDB `episode_run_time` is an array** — Not a scalar int. Must use `FindKey` + `Node()` to read first element.

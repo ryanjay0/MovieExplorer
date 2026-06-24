@@ -491,8 +491,8 @@ void CDatabasePage::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 					{
 						if (mov.strIMDbID == _T("unknown") || mov.strIMDbID == _T("connError") ||
 							mov.strIMDbID == _T("scrapeError") || mov.strIMDbID == _T("rateLimited") ||
-							mov.strTMDBID == _T("unknown") || mov.strTMDBID == _T("connError") ||
-							mov.strTMDBID == _T("scrapeError"))
+						mov.strTMDBID == _T("unknown") || mov.strTMDBID == _T("connError") ||
+						mov.strTMDBID == _T("scrapeError") || mov.strTMDBID == _T("rateLimited"))
 						{
 							mov.strIMDbID.Empty();
 							mov.strTMDBID.Empty();

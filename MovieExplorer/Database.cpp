@@ -488,7 +488,7 @@ bool CDatabase::Load(RString_ strFilePath)
 				if ((pMov->strIMDbID == _T("unknown") || pMov->strIMDbID == _T("connError") || 
 						pMov->strIMDbID == _T("scrapeError") || pMov->strIMDbID == _T("rateLimited")) &&
 						(pMov->strTMDBID == _T("unknown") || pMov->strTMDBID == _T("connError") ||
-						pMov->strTMDBID == _T("scrapeError") || pMov->strTMDBID.IsEmpty()) &&
+						pMov->strTMDBID == _T("scrapeError") || pMov->strTMDBID == _T("rateLimited") || pMov->strTMDBID.IsEmpty()) &&
 						(pMov->strMovieMeterID == _T("unknown") || 
 						pMov->strMovieMeterID == _T("connError") || 
 						pMov->strMovieMeterID == _T("scrapeError")))
@@ -520,8 +520,8 @@ bool CDatabase::Load(RString_ strFilePath)
 				if (!mov.strTitle.IsEmpty() &&
 					((!mov.strIMDbID.IsEmpty() && mov.strIMDbID != _T("unknown") && mov.strIMDbID != _T("connError") &&
 					mov.strIMDbID != _T("scrapeError") && mov.strIMDbID != _T("rateLimited")) ||
-					(!mov.strTMDBID.IsEmpty() && mov.strTMDBID != _T("unknown") && mov.strTMDBID != _T("connError") &&
-					mov.strTMDBID != _T("scrapeError"))))
+				(!mov.strTMDBID.IsEmpty() && mov.strTMDBID != _T("unknown") && mov.strTMDBID != _T("connError") &&
+				mov.strTMDBID != _T("scrapeError") && mov.strTMDBID != _T("rateLimited"))))
 				{
 					RString strPosterID = mov.strTMDBID.IsEmpty() ? mov.strIMDbID : mov.strTMDBID;
 					RString strPosterService = mov.strTMDBID.IsEmpty() ? _T("imdb.com") : _T("tmdb.org");
