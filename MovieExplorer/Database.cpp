@@ -431,6 +431,51 @@ bool CDatabase::Load(RString_ strFilePath)
 				pMov->strIMDbID = pFileTag->GetProperty(_T("imdb.com"));
 				pMov->strMovieMeterID = pFileTag->GetProperty(_T("moviemeter.nl"));
 
+				RXMLTag *pMovieInfoTag = pFileTag->GetChild(_T("MovieInfo"));
+				if (pMovieInfoTag)
+				{
+					DBINFO info;
+					ClearInfo(&info);
+					TagToInfo(pMovieInfoTag, &info);
+
+					pMov->strTitle = info.strTitle;
+					pMov->strYear = info.strYear;
+					pMov->nYear = StringToNumber(pMov->strYear);
+					if (pMov->nYear == 0 && !pMov->strYear.IsEmpty())
+					{
+						INT_PTR nDash = pMov->strYear.Find(_T('-'));
+						if (nDash > 0)
+							pMov->nYear = StringToNumber(pMov->strYear.Left(nDash));
+					}
+					pMov->strCountries = info.strCountries;
+					pMov->strGenres = info.strGenres;
+					pMov->nRuntime = info.nRuntime;
+					pMov->strStoryline = info.strStoryline;
+					pMov->strDirectors = info.strDirectors;
+					pMov->strWriters = info.strWriters;
+					pMov->strStars = info.strStars;
+					pMov->fRating = info.fRating;
+					pMov->fRatingMax = info.fRatingMax;
+					pMov->nMetascore = info.nMetascore;
+					pMov->nVotes = info.nVotes;
+					pMov->strContentRating = info.strContentRating;
+					pMov->nSeason = info.nSeason;
+					pMov->nEpisode = info.nEpisode;
+					pMov->strEpisodeName = info.strEpisodeName;
+					pMov->strEpisodeID = info.strEpisodeID;
+					pMov->strAirDate = info.strAirDate;
+					pMov->bType = info.bType;
+					for (int i = 0; i < DBI_STAR_NUMBER; i++)
+						pMov->strActorId[i] = info.strActorId[i];
+					if (!info.strIMDbID.IsEmpty())
+					{
+						pMov->strIMDbID = info.strIMDbID;
+						pMov->fIMDbRating = info.fIMDbRating;
+						pMov->fIMDbRatingMax = info.fIMDbRatingMax;
+						pMov->nIMDbVotes = info.nIMDbVotes;
+					}
+				}
+
 				// Determine if an update is needed
 
 				if ((pMov->strIMDbID == _T("unknown") || pMov->strIMDbID == _T("connError") || 
@@ -439,8 +484,10 @@ bool CDatabase::Load(RString_ strFilePath)
 						pMov->strMovieMeterID == _T("connError") || 
 						pMov->strMovieMeterID == _T("scrapeError")))
 					pMov->bUpdated = true;
-				else
+				else if (pMov->strTitle.IsEmpty())
 					pMov->bUpdated = false;
+				else
+					pMov->bUpdated = true;
 
 				++nMovies;
 			}
@@ -450,13 +497,48 @@ bool CDatabase::Load(RString_ strFilePath)
 	// Set pointers (couldn't do this immediately because when resizing the array the address
 	// of the whole array is likely to change)
 
+	RString strCacheDir = CorrectPath(GETPREFSTR(_T("Database"), _T("CacheDirectory")));
+
 	foreach (m_categories, cat)
 	{
 		foreach (cat.directories, dir)
 		{
 			dir.pCategory = &cat;
 			foreach (dir.movies, mov)
+			{
 				mov.pDirectory = &dir;
+
+				if (!mov.strTitle.IsEmpty() && !mov.strIMDbID.IsEmpty() &&
+					mov.strIMDbID != _T("unknown") && mov.strIMDbID != _T("connError") &&
+					mov.strIMDbID != _T("scrapeError") && mov.strIMDbID != _T("rateLimited"))
+				{
+					RString strPosterPath = strCacheDir + _T("\\imdb.com\\") + mov.strIMDbID + _T(".jpg");
+					if (mov.posterData.GetSize() == 0)
+						FileToData(strPosterPath, mov.posterData);
+
+					for (int i = 0; i < DBI_STAR_NUMBER; i++)
+					{
+						RString strStarName = GetStar(mov.strStars, i);
+						if (!strStarName.IsEmpty() && !mov.actorImageData[i])
+						{
+							mov.actorImageData[i] = GetImageHash()->GetImage(strStarName);
+							if (!mov.actorImageData[i])
+							{
+								RString strActorPath = strCacheDir + _T("\\imdb.com\\actors\\") + strStarName + _T(".jpg");
+								if (FileExists(strActorPath))
+								{
+									RArray<BYTE> arTmp;
+									if (FileToData(strActorPath, arTmp))
+									{
+										GetImageHash()->SetImage(strStarName, arTmp);
+										mov.actorImageData[i] = GetImageHash()->GetImage(strStarName);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -525,6 +607,44 @@ bool CDatabase::Save()
 					pFileTag->SetProperty(_T("imdb.com"), mov.strIMDbID);
 				if (!mov.strMovieMeterID.IsEmpty())
 					pFileTag->SetProperty(_T("moviemeter.nl"), mov.strMovieMeterID);
+
+				if (!mov.strTitle.IsEmpty())
+				{
+					DBINFO info;
+					ClearInfo(&info);
+					info.strID = mov.strIMDbID;
+					info.strTitle = mov.strTitle;
+					info.strYear = mov.strYear;
+					info.strGenres = mov.strGenres;
+					info.strContentRating = mov.strContentRating;
+					info.strCountries = mov.strCountries;
+					info.nRuntime = mov.nRuntime;
+					info.strStoryline = mov.strStoryline;
+					info.strDirectors = mov.strDirectors;
+					info.strWriters = mov.strWriters;
+					info.strStars = mov.strStars;
+					info.fRating = mov.fRating;
+					info.fRatingMax = mov.fRatingMax;
+					info.nVotes = mov.nVotes;
+					info.nMetascore = mov.nMetascore;
+					info.nSeason = mov.nSeason;
+					info.nEpisode = mov.nEpisode;
+					info.strEpisodeName = mov.strEpisodeName;
+					info.strEpisodeID = mov.strEpisodeID;
+					info.strAirDate = mov.strAirDate;
+					info.bType = mov.bType;
+					for (int i = 0; i < DBI_STAR_NUMBER; i++)
+						info.strActorId[i] = mov.strActorId[i];
+					if (!mov.strIMDbID.IsEmpty())
+					{
+						info.strIMDbID = mov.strIMDbID;
+						info.fIMDbRating = mov.fIMDbRating;
+						info.fIMDbRatingMax = mov.fIMDbRatingMax;
+						info.nIMDbVotes = mov.nIMDbVotes;
+					}
+					info.timestamp = GetSystemTime();
+					InfoToTag(&info, pFileTag->AddChild(_T("MovieInfo")));
+				}
 			}
 		}
 	}

@@ -1,5 +1,7 @@
 #pragma once	
 
+#define BUTTON_ID_REFRESH 7
+
 class CEditDlg : public RDialog
 {
 	friend class RWindow;
@@ -15,11 +17,10 @@ protected:
 	void OnSize(DWORD type, WORD cx, WORD cy);
 	void OnSizing(DWORD side, RECT *pRect);
 	void OnOK();
+	void OnRefresh();
 
-	RButton m_btnOK, m_btnCancel, m_grpIdentification, m_grpInformation, m_grpOptionalProperties,
-			m_chkSeenMovie, m_chkHideMovie;
-	RStatic m_stcFileName, m_stcFileName2, m_stcFileSize, m_stcFileSize2, m_stcIMDb, 
-			m_stcMovieMeter;
-	REdit m_eIMDb, m_eMovieMeter;
+	RButton m_btnOK, m_btnCancel, m_btnRefresh;
+	RStatic m_stcFileName, m_stcFileName2, m_stcFileSize, m_stcFileSize2, m_stcTitle, m_stcTitle2, m_stcIMDb;
+	REdit m_eIMDb;
 	DBMOVIE *m_pMov;
 };
