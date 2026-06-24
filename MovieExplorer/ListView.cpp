@@ -21,6 +21,7 @@
 #define BUTTON_ID_EDIT			4
 #define BUTTON_ID_HIDE			5
 #define BUTTON_ID_DELETE		6
+#define BUTTON_ID_REFRESH		7
 
 #define TOUCH_SCROLL_TIMER_ID	1
 
@@ -132,6 +133,42 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 		GetDB()->Filter();
 		SetFocus(m_hWnd);
 	}
+	else if (hWndControl == m_btnRefresh)
+	{
+		GetDB()->CancelUpdate();
+		if (!mov.strIMDbID.IsEmpty() && mov.strIMDbID[0] == _T('t'))
+		{
+			RString strCachePath = GetAppPath() + _T("Cache\\") + mov.strIMDbID + _T(".xml");
+			DeleteFile(strCachePath);
+			if (!mov.strEpisodeID.IsEmpty())
+			{
+				RString strEpCachePath = GetAppPath() + _T("Cache\\") + mov.strEpisodeID + _T(".xml");
+				DeleteFile(strEpCachePath);
+			}
+		}
+		mov.strIMDbID.Empty();
+		mov.strTitle.Empty();
+		mov.strYear.Empty();
+		mov.strCountries.Empty();
+		mov.strGenres.Empty();
+		mov.strContentRating.Empty();
+		mov.strStoryline.Empty();
+		mov.strDirectors.Empty();
+		mov.strWriters.Empty();
+		mov.strStars.Empty();
+		mov.strEpisodeName.Empty();
+		mov.strEpisodeID.Empty();
+		mov.strAirDate.Empty();
+		mov.fRating = 0; mov.fRatingMax = 0;
+		mov.fIMDbRating = 0; mov.fIMDbRatingMax = 0;
+		mov.nVotes = 0; mov.nIMDbVotes = 0;
+		mov.nYear = 0; mov.nMetascore = 0;
+		mov.nSeason = 0; mov.nEpisode = 0;
+		mov.nRuntime = 0; mov.bType = 0;
+		mov.bUpdated = false;
+		GetDB()->Update();
+		SetFocus(m_hWnd);
+	}
 	else if (hWndControl == m_btnEdit)
 	{
 		CEditDlg dlgEdit(GetMainWnd(), &mov);
@@ -195,6 +232,7 @@ bool CListView::OnCreate(CREATESTRUCT *pCS)
 	if (!m_btnPlay.Create<CToolBarButton>(m_hWnd, 0, &m_mdcPlayBtn,0, false, (HMENU)BUTTON_ID_PLAY) ||
 			!m_btnDir.Create<CToolBarButton>(m_hWnd, 0, &m_mdcDirBtn, 0, false, (HMENU)BUTTON_ID_DIR) ||
 			!m_btnSeen.Create<CToolBarButton>(m_hWnd, 0, &m_mdcSeenBtn, 0, false, (HMENU)BUTTON_ID_SEEN) ||
+			!m_btnRefresh.Create<CToolBarButton>(m_hWnd, 0, &m_mdcRefreshBtn, 0, false, (HMENU)BUTTON_ID_REFRESH) ||
 			!m_btnEdit.Create<CToolBarButton>(m_hWnd, 0, &m_mdcEditBtn, 0, false, (HMENU)BUTTON_ID_EDIT) ||
 			!m_btnHide.Create<CToolBarButton>(m_hWnd, 0, &m_mdcHideBtn, 0, false, (HMENU)BUTTON_ID_HIDE) ||
 			!m_btnDelete.Create<CToolBarButton>(m_hWnd, 0, &m_mdcDeleteBtn, 0 , false, (HMENU)BUTTON_ID_DELETE))
@@ -206,6 +244,7 @@ bool CListView::OnCreate(CREATESTRUCT *pCS)
 	CreateToolTip(m_hWnd, BUTTON_ID_PLAY, hInst,GETSTR(IDS_TOOLTIP_PLAY));
 	CreateToolTip(m_hWnd, BUTTON_ID_DIR, hInst, GETSTR(IDS_TOOLTIP_DIR));
 	CreateToolTip(m_hWnd, BUTTON_ID_SEEN, hInst, GETSTR(IDS_TOOLTIP_SEEN));
+	CreateToolTip(m_hWnd, BUTTON_ID_REFRESH, hInst, _T("Refresh movie info from web"));
 	CreateToolTip(m_hWnd, BUTTON_ID_EDIT, hInst, GETSTR(IDS_TOOLTIP_EDIT));
 	CreateToolTip(m_hWnd, BUTTON_ID_HIDE, hInst, GETSTR(IDS_TOOLTIP_HIDE));
 	CreateToolTip(m_hWnd, BUTTON_ID_DELETE, hInst, GETSTR(IDS_TOOLTIP_DELETE));
@@ -370,6 +409,11 @@ void CListView::OnPrefChanged()
 
 	m_mdcSeenBtn.Create(48, 48);
 	DrawAlphaMap(m_mdcSeenBtn, 0, 0, IDA_SEEN, 48, 48, 
+			GETTHEMECOLOR(_T("ToolBarButton"), _T("IconColor")),
+			GETTHEMEALPHA(_T("ToolBarButton"), _T("IconAlpha")));
+
+	m_mdcRefreshBtn.Create(48, 48);
+	DrawAlphaMap(m_mdcRefreshBtn, 0, 0, IDA_REFRESH, 48, 48,
 			GETTHEMECOLOR(_T("ToolBarButton"), _T("IconColor")),
 			GETTHEMEALPHA(_T("ToolBarButton"), _T("IconAlpha")));
 
@@ -763,6 +807,7 @@ void CListView::Draw()
 	MoveWindow(m_btnPlay, 0, 0, 0, 0);
 	MoveWindow(m_btnDir, 0, 0, 0, 0);
 	MoveWindow(m_btnSeen, 0, 0, 0, 0);
+	MoveWindow(m_btnRefresh, 0, 0, 0, 0);
 	MoveWindow(m_btnEdit, 0, 0, 0, 0);
 	MoveWindow(m_btnHide, 0, 0, 0, 0);
 	MoveWindow(m_btnDelete, 0, 0, 0, 0);
@@ -1313,6 +1358,8 @@ void CListView::Draw()
 			MoveWindow(m_btnEdit, &rcBtn);
 			rcBtn.x -= rcBtn.cx + SCX(4);
 			MoveWindow(m_btnSeen, &rcBtn);
+			rcBtn.x -= rcBtn.cx + SCX(4);
+			MoveWindow(m_btnRefresh, &rcBtn);
 
 			RString strCorrDirPath = CorrectPath(dir.strPath, true);
 			if ((dir.strComputerName == GetComputerName() || dir.strComputerName.IsEmpty()) &&

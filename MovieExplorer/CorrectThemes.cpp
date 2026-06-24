@@ -106,7 +106,7 @@ bool CorrectThemes()
 	themeMgr.SetStr(_T("LogWnd"), _T("FontSize"), _T("10"), false);
 	themeMgr.SetStr(_T("LogWnd"), _T("FontBold"), _T("false"), false);
 	themeMgr.SetStr(_T("LogWnd"), _T("FontItalic"), _T("false"), false);
-	themeMgr.SetStr(_T("LogWnd"), _T("ShowScrollBar"), _T("false"), false);
+	themeMgr.SetStr(_T("LogWnd"), _T("ShowScrollBar"), _T("true"), false);
 
 	themeMgr.SetStr(_T("ToolBarButton"), _T("IconColor"), _T("#ebebeb"), false);
 	themeMgr.SetStr(_T("ToolBarButton"), _T("IconAlpha"), _T("1.0"), false);

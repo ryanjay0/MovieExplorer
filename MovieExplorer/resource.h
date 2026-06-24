@@ -37,6 +37,7 @@
 #define IDA_HIDE			209
 #define IDA_DELETE			210
 #define IDA_VIEW			211
+#define IDA_REFRESH			212
 
 // Toolbar buttons (command IDs, no strings)
 
