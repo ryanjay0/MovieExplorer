@@ -22,16 +22,6 @@
 #define DB_TYPE_UNKNOWN			0
 #define DB_TYPE_MOVIE			1
 #define DB_TYPE_TV				2
-/*
-#define DB_SORTBY_TITLEASC		0
-#define DB_SORTBY_TITLEDES		1
-#define DB_SORTBY_YEARASC		2
-#define DB_SORTBY_YEARDES		3
-#define DB_SORTBY_RATINGASC		4
-#define DB_SORTBY_RATINGDES		5
-#define DB_SORTBY_FILEDATEASC	6
-#define DB_SORTBY_FILEDATEDES	7
-*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Data structs
@@ -56,7 +46,7 @@ struct DBDIRECTORY
 
 struct DBMOVIE
 {
-	RString strFileName, strIMDbID, strTMDBID, strMovieMeterID, strTitle, strYear, strCountries, strGenres, strContentRating,
+	RString strFileName, strIMDbID, strTMDBID, strTitle, strYear, strCountries, strGenres, strContentRating,
 			strStoryline, strDirectors, strWriters, strStars, strEpisodeName, strEpisodeID, strAirDate;
 	float fRating, fRatingMax, fIMDbRating, fIMDbRatingMax;
 	INT_PTR nVotes, nIMDbVotes, nYear, nMetascore, nSeason, nEpisode, nRuntime;

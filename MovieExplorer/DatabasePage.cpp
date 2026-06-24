@@ -261,7 +261,6 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 	RObArray<RString> services;
 	services.Add(_T("tmdb.org"));
 	services.Add(_T("imdb.com"));
-	services.Add(_T("moviemeter.nl"));
 	services.Add(_T(""));
 
 	foreach (services, strServiceName)

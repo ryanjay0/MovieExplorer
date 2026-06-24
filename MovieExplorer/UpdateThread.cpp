@@ -4,7 +4,6 @@
 #include "ParseFileName.h"
 #include "ScrapeIMDb.h"
 #include "ScrapeTMDB.h"
-#include "ScrapeMovieMeter.h"
 
 static RString GetCacheFileName(RString strCacheDir, RString strServ, RString strID, INT_PTR nSeason, INT_PTR nEpisode)
 {
@@ -92,8 +91,6 @@ UINT CALLBACK UpdateThread(void *pParam)
 				strID = mov.strTMDBID;
 			else if (strServ == _T("imdb.com"))
 				strID = mov.strIMDbID;
-			else if (strServ == _T("moviemeter.nl"))
-				strID = mov.strMovieMeterID;
 			else
 				ASSERT(false);
 
@@ -182,8 +179,6 @@ UINT CALLBACK UpdateThread(void *pParam)
 					info.status = ScrapeTMDB(&info, strTMDBAPIKey, strOMDbAPIKey, &seriesCache, pUsage);
 				else if (strServ == _T("imdb.com"))
 					info.status = ScrapeIMDb(&info, strOMDbAPIKey, &seriesCache, pUsage);
-				else if (strServ == _T("moviemeter.nl"))
-					info.status = ScrapeMovieMeter(&info);
 				else
 					ASSERT(false);
 
@@ -328,8 +323,6 @@ UINT CALLBACK UpdateThread(void *pParam)
 				mov.strTMDBID = strID;
 			else if (strServ == _T("imdb.com"))
 				mov.strIMDbID = strID;
-			else if (strServ == _T("moviemeter.nl"))
-				mov.strMovieMeterID = strID;
 			else
 				ASSERT(false);
 		}

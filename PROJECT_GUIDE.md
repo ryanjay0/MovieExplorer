@@ -19,8 +19,6 @@ MovieExplorer is a native Win32 C++ application that catalogues movie and TV fil
 MovieExplorer/
 ├── MovieExplorer/          # Main application source
 │   ├── VS2015/             # VS project files (.vcxproj, .sln)
-│   ├── VS2013/             # Old VS2013 project (unused)
-│   ├── VS2010/             # Old VS2010 project (unused)
 │   ├── strings/            # String resource DLL project
 │   ├── *.cpp, *.h          # App source files
 │   └── ...
@@ -70,7 +68,7 @@ MovieExplorer/
 struct DBMOVIE {
     RString strFileName, strTitle, strYear, strGenres, strCountries;
     RString strContentRating, strStoryline, strDirectors, strWriters, strStars;
-    RString strIMDbID, strTMDBID, strMovieMeterID;
+    RString strIMDbID, strTMDBID;
     RString strEpisodeName, strEpisodeID, strAirDate;
     int nYear, nRuntime, nSeason, nEpisode, nVotes, nIMDbVotes, nMetascore;
     float fRating, fRatingMax, fIMDbRating, fIMDbRatingMax;
@@ -429,7 +427,7 @@ Defined in `messages.h`:
     <Directory path="C:\Movies" computerName="DESKTOP-ABC">
       <File name="The Matrix (1999).mkv" size="1234567890" time="1234567890" 
             resumeTime="-1" seen="true" hide="false"
-            imdb.com="tt0133093" tmdb.org="603" moviemeter.nl="" />
+            imdb.com="tt0133093" tmdb.org="603" />
     </Directory>
   </Category>
 </DatabaseFile>
@@ -506,6 +504,12 @@ All dimensions use `SCX()`/`SCY()` (scale) and `DUX()`/`DUY()` (dialog units) ma
 27. **Sort label renames** — Intuitive labels ("Title (A-Z)" not "Title / Title (descending)"); default sort changed to File Time Descending
 28. **Dark theme scrollbar** — Custom dark scrollbar palette in `CorrectThemes.cpp`; light theme uses Windows default
 29. **Metadata in database XML** — `<MovieInfo>` child element on each `<File>` makes DB self-contained for text data
+30. **MovieMeter removal** — Deleted `ScrapeMovieMeter.h/cpp`, removed `strMovieMeterID` field, removed `moviemeter.nl` from all service dropdowns/logic
+31. **Dutch language dropped** — Removed incomplete Dutch translations (85/93 strings, encoding issues); English built-in + French XML only
+32. **Dead translations removed** — Deleted Croatian/Italian/Greek XML (76/93 strings, never loaded); fixed `.rc` `XMLFILE` case inconsistency
+33. **Old VS projects removed** — Deleted VS2010/ and VS2013/ directories (CI uses VS2015 only)
+34. **Win8/WinVista/Win2K helpers removed** — Deleted `IsWin8()`, `IsWinVista()`, `IsWin2K()` from `general.h`; removed last `IsWin8()` caller in `CategoryBar.cpp`
+35. **Dead code cleanup** — Removed orphaned `.new` backup files, `IndonesiaLanguage` file, commented-out sort constants, commented-out theme fallback, dead ListView experiment
 
 ### What Still Needs Work
 

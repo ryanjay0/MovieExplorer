@@ -146,7 +146,6 @@ void ClearMovie(DBMOVIE *pMovie)
 	pMovie->strContentRating.Empty();
 	pMovie->strIMDbID.Empty();
 	pMovie->strTMDBID.Empty();
-	pMovie->strMovieMeterID.Empty();
 	pMovie->nRuntime = 0;
 	pMovie->strStars.Empty();
 	pMovie->strStoryline.Empty();
@@ -435,7 +434,6 @@ bool CDatabase::Load(RString_ strFilePath)
 				pMov->bSeen = ((RString)pFileTag->GetProperty(_T("seen")) == _T("true"));
 				pMov->strIMDbID = pFileTag->GetProperty(_T("imdb.com"));
 				pMov->strTMDBID = pFileTag->GetProperty(_T("tmdb.org"));
-				pMov->strMovieMeterID = pFileTag->GetProperty(_T("moviemeter.nl"));
 
 				RXMLTag *pMovieInfoTag = pFileTag->GetChild(_T("MovieInfo"));
 				if (pMovieInfoTag)
@@ -488,10 +486,7 @@ bool CDatabase::Load(RString_ strFilePath)
 				if ((pMov->strIMDbID == _T("unknown") || pMov->strIMDbID == _T("connError") || 
 						pMov->strIMDbID == _T("scrapeError") || pMov->strIMDbID == _T("rateLimited")) &&
 						(pMov->strTMDBID == _T("unknown") || pMov->strTMDBID == _T("connError") ||
-						pMov->strTMDBID == _T("scrapeError") || pMov->strTMDBID == _T("rateLimited") || pMov->strTMDBID.IsEmpty()) &&
-						(pMov->strMovieMeterID == _T("unknown") || 
-						pMov->strMovieMeterID == _T("connError") || 
-						pMov->strMovieMeterID == _T("scrapeError")))
+						pMov->strTMDBID == _T("scrapeError") || pMov->strTMDBID == _T("rateLimited") || pMov->strTMDBID.IsEmpty()))
 					pMov->bUpdated = true;
 				else if (pMov->strTitle.IsEmpty())
 					pMov->bUpdated = false;
@@ -625,8 +620,6 @@ bool CDatabase::Save()
 					pFileTag->SetProperty(_T("imdb.com"), mov.strIMDbID);
 				if (!mov.strTMDBID.IsEmpty())
 					pFileTag->SetProperty(_T("tmdb.org"), mov.strTMDBID);
-				if (!mov.strMovieMeterID.IsEmpty())
-					pFileTag->SetProperty(_T("moviemeter.nl"), mov.strMovieMeterID);
 
 				if (!mov.strTitle.IsEmpty())
 				{

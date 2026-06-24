@@ -269,11 +269,8 @@ void CCategoryBar::PrepareDraw()
 			roundf(GETTHEMEFLOAT(_T("CategoryBarButton"), _T("SelectedBorder2Alpha")) * 255.0f), false);
 
 	DrawRect(m_sprSelected, 2 * SCX(1), 2 * SCX(1), cy - 4 * SCX(1), cy - 4 * SCX(1),
-			GETTHEMECOLOR(_T("CategoryBarButton"), _T("SelectedBorder3Color")),
-			roundf(GETTHEMEFLOAT(_T("CategoryBarButton"), _T("SelectedBorder3Alpha")) * 255.0f), false);
-
-	if (IsWin8() && GETTHEMECOLOR(_T("CategoryBarButton"), _T("SelectedTopColor")) == 0xCA7919)
-		DrawRect(m_sprSelected, 0, 0, S(1), cy, 0x000000, 20);
+		GETTHEMECOLOR(_T("CategoryBarButton"), _T("SelectedBorder3Color")),
+		roundf(GETTHEMEFLOAT(_T("CategoryBarButton"), _T("SelectedBorder3Alpha")) * 255.0f), false);
 
 	// Get text font and color
 

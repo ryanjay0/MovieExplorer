@@ -106,11 +106,6 @@ void Run()
 
 	LoadLanguageTranslation(IDT_FRENCH, _T("Languages\\French.xml"));
 
-//  Desactivated because current translation file are containing only 76 sentences and current versions needs 93 sentences
-//	LoadLanguageTranslation(IDT_CROATIAN, _T("Languages\\Croatian.xml"));
-//	LoadLanguageTranslation(IDT_GREEK, _T("Languages\\Greek.xml"));
-//	LoadLanguageTranslation(IDT_ITALIAN, _T("Languages\\Italian.xml"));
-
 	// Load language strings
 
 	RLanguageMgr langMgr;
@@ -132,12 +127,8 @@ void Run()
 	g_pThemeMgr = &themeMgr;
 	if (!CorrectThemes() || !themeMgr.Open(CorrectPath(prefMgr.GetStr(_T("ThemeFile")))))
 	{
-		//prefMgr.SetString(_T("ThemeFile"), _T("Themes\\Light.xml"));
-		//if (!themeMgr.Open(CorrectPath(_T("Themes\\Light.xml"))))
-		//{
-			MessageBox(NULL, _T("Failed to load theme."), _T("Movie Explorer"), MB_ICONEXCLAMATION);
-			return;
-		//}
+		MessageBox(NULL, _T("Failed to load theme."), _T("Movie Explorer"), MB_ICONEXCLAMATION);
+		return;
 	}
 
 	// Create database object (required by main window)

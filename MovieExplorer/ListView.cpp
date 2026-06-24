@@ -973,7 +973,7 @@ void CListView::Draw()
 			str = GETSTR(IDS_UPDATEINPROGRESS);
 			foreach (m_servicesInUse, strServ)
 			{
-				RString& strID = (strServ == _T("imdb.com") ? mov.strIMDbID : mov.strMovieMeterID);
+				RString& strID = (strServ == _T("tmdb.org") ? mov.strTMDBID : mov.strIMDbID);
 				if (strID == _T("unknown"))
 					{str = GETSTR(IDS_MOVIEUNKNOWN); str.Replace(_T("%SERVICENAME%"), strServ); break;}
 				else if (strID == _T("connError"))
@@ -1134,18 +1134,13 @@ void CListView::Draw()
 			SetTextColor(m_mdc, m_clrText);
 			TextOut(m_mdc, SCX(200) + SCX(35) + m_nColumnWidth + nOffset + SCX(40),
 				y + SCY(LV_DETAILS_HEIGHT) - SCY(20), cat.strName);
-			/*	GetTextExtentPoint32(m_mdc, cat.strName + _T(" ["), &sz);
-				TextOut(m_mdc, SCX(200) + SCX(35) + m_nColumnWidth + SCX(10) + sz.cx,
-				y + SCY(LV_DETAILS_HEIGHT) - SCY(52), dir.strPath + _T("]"));*/
 			SelectObject(m_mdc, hPrevFont);
 
 		}
 
 		// draw rating
 
-		//if (mov.fRating != 0.0f)
-		if( (m_strRatingServ == _T("imdb.com") && IsValidId(mov.strIMDbID)) ||
-			(m_strRatingServ == _T("moviemeter.nl") && IsValidId(mov.strMovieMeterID)))
+		if (m_strRatingServ == _T("imdb.com") && IsValidId(mov.strIMDbID))
 		{
 			float fRating = mov.fRating;
 			float fRatingMax = mov.fRatingMax;
@@ -1240,11 +1235,6 @@ void CListView::Draw()
 			{
 				pLink->strText = _T("IMDb");
 				pLink->strURL = _T("http://www.imdb.com/title/") + mov.strIMDbID + _T("/");
-			}
-			else if (m_strRatingServ == _T("moviemeter.nl"))
-			{
-				pLink->strText = _T("MovieMeter");
-				pLink->strURL = _T("http://www.moviemeter.nl/film/") + mov.strMovieMeterID;
 			}
 			else
 				ASSERT(false);

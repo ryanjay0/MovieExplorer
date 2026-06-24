@@ -806,15 +806,6 @@ inline bool FillSolidRect(HDC hDC, int x, int y, int cx, int cy, COLORREF clr)
 	return FillSolidRect(hDC, &rc, clr);
 }
 
-inline bool IsWin8()
-{
-	OSVERSIONINFO vi;
-	ZeroMemory(&vi, sizeof(OSVERSIONINFO));
-	vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	VERIFY(GetVersionEx(&vi));
-	return (vi.dwMajorVersion == 6 && vi.dwMinorVersion == 2);
-}
-
 inline bool IsWin7()
 {
 	OSVERSIONINFO vi;
@@ -824,15 +815,6 @@ inline bool IsWin7()
 	return (vi.dwMajorVersion == 6 && vi.dwMinorVersion == 1);
 }
 
-inline bool IsWinVista()
-{
-	OSVERSIONINFO vi;
-	ZeroMemory(&vi, sizeof(OSVERSIONINFO));
-	vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	VERIFY(GetVersionEx(&vi));
-	return (vi.dwMajorVersion == 6 && vi.dwMinorVersion == 0);
-}
-
 inline bool IsWinXP()
 {
 	OSVERSIONINFO vi;
@@ -840,15 +822,6 @@ inline bool IsWinXP()
 	vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	VERIFY(GetVersionEx(&vi));
 	return (vi.dwMajorVersion == 5 && vi.dwMinorVersion == 1);
-}
-
-inline bool IsWin2K()
-{
-	OSVERSIONINFO vi;
-	ZeroMemory(&vi, sizeof(OSVERSIONINFO));
-	vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	VERIFY(GetVersionEx(&vi));
-	return (vi.dwMajorVersion == 5 && vi.dwMinorVersion == 0);
 }
 
 inline RString_ GetEmptyString()
