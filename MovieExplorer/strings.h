@@ -188,14 +188,14 @@ inline void LoadStrings()
 	GetLangMgr()->SetString(nLanguage, 82, _T("Show/Hide Watched"), false);
 	GetLangMgr()->SetString(nLanguage, 83, _T("Sort"), false);
 	GetLangMgr()->SetString(nLanguage, 84, _T("Switch View"), false);
-	GetLangMgr()->SetString(nLanguage, 85, _T("Title"), false);
-	GetLangMgr()->SetString(nLanguage, 86, _T("Title (descending)"), false);
-	GetLangMgr()->SetString(nLanguage, 87, _T("Year"), false);
-	GetLangMgr()->SetString(nLanguage, 88, _T("Year (descending)"), false);
-	GetLangMgr()->SetString(nLanguage, 89, _T("Rating"), false);
-	GetLangMgr()->SetString(nLanguage, 90, _T("Rating (descending)"), false);
-	GetLangMgr()->SetString(nLanguage, 91, _T("File time"), false);
-	GetLangMgr()->SetString(nLanguage, 92, _T("File time (descending)"), false);
+	GetLangMgr()->SetString(nLanguage, 85, _T("Title (A-Z)"), false);
+	GetLangMgr()->SetString(nLanguage, 86, _T("Title (Z-A)"), false);
+	GetLangMgr()->SetString(nLanguage, 87, _T("Year (Oldest First)"), false);
+	GetLangMgr()->SetString(nLanguage, 88, _T("Year (Newest First)"), false);
+	GetLangMgr()->SetString(nLanguage, 89, _T("Rating (Lowest First)"), false);
+	GetLangMgr()->SetString(nLanguage, 90, _T("Rating (Highest First)"), false);
+	GetLangMgr()->SetString(nLanguage, 91, _T("File Time (Oldest First)"), false);
+	GetLangMgr()->SetString(nLanguage, 92, _T("File Time (Newest First)"), false);
 
 	nLanguage = GetLangMgr()->GetLanguage(_T("Dutch"));
 	if (nLanguage == -1)
@@ -241,7 +241,7 @@ inline void LoadStrings()
 	GetLangMgr()->SetString(nLanguage, 37, _T("Zoek letterlijk naar invoer"), false);
 	GetLangMgr()->SetString(nLanguage, 38, _T("Doorzoek ook het plot van de film"), false);
 	GetLangMgr()->SetString(nLanguage, 39, _T("Normaliseer beoordelingen naar schaal van 1 tot 10"), false);
-	GetLangMgr()->SetString(nLanguage, 40, _T("Maak categorieën voor films en televisie"), false);
+	GetLangMgr()->SetString(nLanguage, 40, _T("Maak categorieï¿½n voor films en televisie"), false);
 	GetLangMgr()->SetString(nLanguage, 41, _T("Database"), false);
 	GetLangMgr()->SetString(nLanguage, 42, _T("Indexeer bestanden met de volgende extensies"), false);
 	GetLangMgr()->SetString(nLanguage, 43, _T("Voeg mappen ook toe aan lijst"), false);
@@ -255,7 +255,7 @@ inline void LoadStrings()
 	GetLangMgr()->SetString(nLanguage, 51, _T("Beoordeling"), false);
 	GetLangMgr()->SetString(nLanguage, 52, _T("Gecombineerd"), false);
 	GetLangMgr()->SetString(nLanguage, 53, _T("Geen"), false);
-	GetLangMgr()->SetString(nLanguage, 54, _T("Categorieën"), false);
+	GetLangMgr()->SetString(nLanguage, 54, _T("Categorieï¿½n"), false);
 	GetLangMgr()->SetString(nLanguage, 55, _T("Mappen"), false);
 	GetLangMgr()->SetString(nLanguage, 56, _T("Map/Bestand"), false);
 	GetLangMgr()->SetString(nLanguage, 57, _T("Alleen beschikbaar op"), false);
@@ -286,12 +286,4 @@ inline void LoadStrings()
 	GetLangMgr()->SetString(nLanguage, 82, _T("Weergeven/Verbergen Bekeken"), false);
 	GetLangMgr()->SetString(nLanguage, 83, _T("Sorteer"), false);
 	GetLangMgr()->SetString(nLanguage, 84, _T("Schakelen Scherm"), false);
-	GetLangMgr()->SetString(nLanguage, 85, _T("Titel"), false);
-	GetLangMgr()->SetString(nLanguage, 86, _T("Titel (aflopend)"), false);
-	GetLangMgr()->SetString(nLanguage, 87, _T("Jaar"), false);
-	GetLangMgr()->SetString(nLanguage, 88, _T("Jaar (aflopend)"), false);
-	GetLangMgr()->SetString(nLanguage, 89, _T("Beoordeling"), false);
-	GetLangMgr()->SetString(nLanguage, 90, _T("Beoordeling (aflopend)"), false);
-	GetLangMgr()->SetString(nLanguage, 91, _T("Bestandstijd"), false);
-	GetLangMgr()->SetString(nLanguage, 92, _T("Bestandstijd (aflopend)"), false);
 }
