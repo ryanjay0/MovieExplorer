@@ -95,16 +95,13 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 			// with a valid extension not containing 'sample'. Otherwise open the directory
 			// so user can choose the file manually.
 			
-			if (m_bUseVlc)
-			{
-				resume.CloseVlc();
-				resume.ReadThread();
-			}
-
 			if (FileExists(strFilePath))
 			{
 				if (m_bUseVlc)
+				{
 					resume.LaunchVlc(strFilePath, mov.resumeTime);
+					resume.WaitForExitAndRead();
+				}
 				else
 					ShellExecute(HWND_DESKTOP, _T("open"), strFilePath, NULL, NULL, SW_SHOW);
 			}
@@ -877,13 +874,31 @@ void CListView::Draw()
 			nOffsetT += szT.cx + SCX(10);
 		}
 
-		// draw % of movie seen if not 0. Returns to 0 when finished.
-		if (m_bUseVlc)
+		if (mov.nRuntime != 0 && mov.resumeTime > 0)
 		{
-			if (mov.nRuntime != 0 && mov.resumeTime > 0)
-				TextOut(m_mdc, SCX(200) + SCX(35) + nOffsetT, y + SCY(84),
-					NumberToString((INT64)((double)mov.resumeTime / ((double)mov.nRuntime * 60.0) * 100.0)) + _T("%"));
-			SelectObject(m_mdc, hPrevFont);
+			double dPct = (double)mov.resumeTime / ((double)mov.nRuntime * 60.0);
+			if (dPct > 1.0) dPct = 1.0;
+			int nBarMaxW = SCX(100);
+			int nBarH = SCY(6);
+			int nBarX = SCX(200) + SCX(35) + nOffsetT;
+			int nBarY = y + SCY(87);
+
+			FillSolidRect(m_mdc, nBarX, nBarY, nBarMaxW, nBarH, m_clrShadow);
+			int nFillW = (int)(nBarMaxW * dPct);
+			COLORREF clrBar;
+			if (dPct >= 0.95)
+				clrBar = m_clrGood;
+			else if (dPct >= 0.5)
+				clrBar = m_clrNeutral;
+			else
+				clrBar = m_clrText;
+			if (nFillW > 0)
+				FillSolidRect(m_mdc, nBarX, nBarY, nFillW, nBarH, clrBar);
+
+			RString strPct = NumberToString((INT64)(dPct * 100.0)) + _T("%");
+			GetTextExtentPoint32(m_mdc, strPct, &szT);
+			TextOut(m_mdc, nBarX + nBarMaxW + SCX(6), y + SCY(84), strPct);
+			nOffsetT += nBarMaxW + szT.cx + SCX(16);
 		}
 		// draw storyline
 
