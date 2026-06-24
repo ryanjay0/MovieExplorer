@@ -7,58 +7,44 @@
 
 UINT CALLBACK UpdateThread(void *pParam)
 {
-	// Save window handle, and get preferences
-
 	HWND hDatabaseWnd = ((UPDATETHREADDATA*)pParam)->hDatabaseWnd;
 
-	RString strTitleServ = GETPREFSTR(_T("InfoService"), _T("Title"));
-	RString strYearServ = GETPREFSTR(_T("InfoService"), _T("Year"));
-	RString strCountriesServ = GETPREFSTR(_T("InfoService"), _T("Countries"));
-	RString strGenresServ = GETPREFSTR(_T("InfoService"), _T("Genres"));
-	RString strRuntimeServ = GETPREFSTR(_T("InfoService"), _T("Runtime"));
-	RString strStorylineServ = GETPREFSTR(_T("InfoService"), _T("Storyline"));
-	RString strDirectorsServ = GETPREFSTR(_T("InfoService"), _T("Directors"));
-	RString strWritersServ = GETPREFSTR(_T("InfoService"), _T("Writers"));
-	RString strStarsServ = GETPREFSTR(_T("InfoService"), _T("Stars"));
-	RString strPosterServ = GETPREFSTR(_T("InfoService"), _T("Poster"));
-	RString strRatingServ = GETPREFSTR(_T("InfoService"), _T("Rating"));
-
-
+	RString strOMDbAPIKey = GETPREFSTR(_T("OMDbAPIKey"));
 
 	UINT64 nWeeks = (UINT64)GETPREFINT(_T("Database"), _T("MaxInfoAge"));
 	if (nWeeks < 2)
 		nWeeks = 2;
-	UINT64 maxTimeDiff = nWeeks * 7 * 24 * 60 * 60 * 10000000; // 1 second = 10000000 100th-nanoseconds
+	UINT64 maxTimeDiff = nWeeks * 7 * 24 * 60 * 60 * 10000000;
 	UINT64 currentTime = GetSystemTime();
 	UINT64 minTime = currentTime - maxTimeDiff;
 
 	RString strCacheDir = CorrectPath(GETPREFSTR(_T("Database"), _T("CacheDirectory")));
-	
-	// Create thread message queue and signal we're ready
-
-	MSG msg;
-	PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);
-	
-	((UPDATETHREADDATA*)pParam)->eReady.SetEvent();
 
 	// Determine which services are in use
 
 	RObArray<RString> servicesInUse;
-	if (servicesInUse.IndexOf(strTitleServ) == -1) servicesInUse.Add(strTitleServ);
-	if (servicesInUse.IndexOf(strYearServ) == -1) servicesInUse.Add(strYearServ);
-	if (servicesInUse.IndexOf(strCountriesServ) == -1) servicesInUse.Add(strCountriesServ);
-	if (servicesInUse.IndexOf(strGenresServ) == -1) servicesInUse.Add(strGenresServ);
-	if (servicesInUse.IndexOf(strRuntimeServ) == -1) servicesInUse.Add(strRuntimeServ);
-	if (servicesInUse.IndexOf(strStorylineServ) == -1) servicesInUse.Add(strStorylineServ);
-	if (servicesInUse.IndexOf(strDirectorsServ) == -1) servicesInUse.Add(strDirectorsServ);
-	if (servicesInUse.IndexOf(strWritersServ) == -1) servicesInUse.Add(strWritersServ);
-	if (servicesInUse.IndexOf(strStarsServ) == -1) servicesInUse.Add(strStarsServ);
-	if (servicesInUse.IndexOf(strPosterServ) == -1) servicesInUse.Add(strPosterServ);
-	if (servicesInUse.IndexOf(strRatingServ) == -1) servicesInUse.Add(strRatingServ);
+	RString strOnlyUse = GETPREFSTR(_T("InfoService"), _T("OnlyUse"));
+	if (!strOnlyUse.IsEmpty())
+		servicesInUse.Add(strOnlyUse);
+	else
+	{
+		servicesInUse.Add(_T("imdb.com"));
+		if (!GETPREFSTR(_T("InfoService"), _T("Title")).IsEmpty() &&
+			GETPREFSTR(_T("InfoService"), _T("Title")) != _T("imdb.com"))
+			servicesInUse.Add(GETPREFSTR(_T("InfoService"), _T("Title")));
+	}
 
+	// Remove empty entries
 	foreach (servicesInUse, strServ, i)
 		if (strServ.IsEmpty())
 			{servicesInUse.RemoveAt(i); break;}
+
+	// Create thread message queue and signal we're ready
+
+	MSG msg;
+	PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);
+
+	((UPDATETHREADDATA*)pParam)->eReady.SetEvent();
 
 	// Start updating movies
 
@@ -110,17 +96,15 @@ UINT CALLBACK UpdateThread(void *pParam)
 						if (timestamp >= minTime)
 						{
 							TagToInfo(pInfoTag, &info);
-							VERIFY(FileToData(strCacheDir + _T("\\") + strServ + _T("\\") + strID + 
+							VERIFY(FileToData(strCacheDir + _T("\\") + strServ + _T("\\") + strID +
 									_T(".jpg"), info.posterData));
 
 							for (int i = 0; i < DBI_STAR_NUMBER; i++)
 							{
-								// Check hash table first then try to load from file cache
-
 								RString strStarName = GetStar(info.strStars, i);
 								info.actorImageData[i] = GetImageHash()->GetImage(strStarName);
 
-								if (!info.actorImageData[i] && !strStarName.IsEmpty() && FileExists(strCacheDir + _T("\\") + 
+								if (!info.actorImageData[i] && !strStarName.IsEmpty() && FileExists(strCacheDir + _T("\\") +
 									strServ + _T("\\actors\\") + strStarName + _T(".jpg")))
 								{
 									RArray<BYTE> arTmp;
@@ -130,17 +114,12 @@ UINT CALLBACK UpdateThread(void *pParam)
 										GetImageHash()->SetImage(strStarName, arTmp);
 										info.actorImageData[i] = GetImageHash()->GetImage(strStarName);
 									}
-									else
-										ASSERT(false);  // Couldn't read data from file that exists.
 								}
 							}
-							
 
 							info.status = DBI_STATUS_UPDATED;
 						}
 					}
-					else
-						ASSERT(false); // invalid cache file
 				}
 			}
 
@@ -158,7 +137,7 @@ UINT CALLBACK UpdateThread(void *pParam)
 				info.strID = strID;
 
 				if (strServ == _T("imdb.com"))
-					info.status = ScrapeIMDb(&info);
+					info.status = ScrapeIMDb(&info, strOMDbAPIKey);
 				else if (strServ == _T("moviemeter.nl"))
 					info.status = ScrapeMovieMeter(&info);
 				else
@@ -170,7 +149,7 @@ UINT CALLBACK UpdateThread(void *pParam)
 				if (info.status == DBI_STATUS_UPDATED)
 				{
 					strID = info.strID;
-					LOG(_T("Succesfully updated ") + info.strTitle + _T(" (") + info.strYear + 
+					LOG(_T("Succesfully updated ") + info.strTitle + _T(" (") + info.strYear +
 						_T(") from ") + strServ + _T(".\n"));
 
 					++nUpdatedFromWeb;
@@ -182,43 +161,40 @@ UINT CALLBACK UpdateThread(void *pParam)
 						CreateDirectory(strCacheDir);
 					if (!DirectoryExists(strCacheDir + _T("\\") + strServ))
 						CreateDirectory(strCacheDir + _T("\\") + strServ);
-					VERIFY(xmlFile.Write(strCacheDir + _T("\\") + strServ + 
+					VERIFY(xmlFile.Write(strCacheDir + _T("\\") + strServ +
 							_T("\\") + strID + _T(".xml")));
-					VERIFY(DataToFile(info.posterData, strCacheDir + _T("\\") + strServ + 
+					VERIFY(DataToFile(info.posterData, strCacheDir + _T("\\") + strServ +
 							_T("\\") + strID + _T(".jpg")));
-					
-					// save actor images to directory
-					
+
 					if (!DirectoryExists(strCacheDir + _T("\\") + strServ + _T("\\actors\\")))
 						CreateDirectory(strCacheDir + _T("\\") + strServ + _T("\\actors\\"));
 
 					for (int i = 0; i < DBI_STAR_NUMBER; i++)
 					{
 						RString strStarName = GetStar(info.strStars, i);
-						if (!strStarName.IsEmpty() && info.actorImageData[i] && 
+						if (!strStarName.IsEmpty() && info.actorImageData[i] &&
 							!FileExists(strCacheDir + _T("\\") + strServ + _T("\\actors\\")
 							+ strStarName + _T(".jpg")))
 							VERIFY(DataToFile(*info.actorImageData[i], strCacheDir + _T("\\") + strServ + _T("\\actors\\")
 							+ strStarName + _T(".jpg")));
-
 					}
 				}
 				else if (info.status == DBI_STATUS_UNKNOWN)
 				{
 					strID = _T("unknown");
-					LOG(_T("Failed to identify '") + mov.strFileName + _T("' on ") + 
+					LOG(_T("Failed to identify '") + mov.strFileName + _T("' on ") +
 							strServ + _T(".\n"));
 				}
 				else if (info.status == DBI_STATUS_CONNERROR)
 				{
 					strID = _T("connError");
-					LOG(_T("A connection error occured while identifying ") + mov.strFileName + 
+					LOG(_T("A connection error occured while identifying ") + mov.strFileName +
 							_T(" on ") + strServ + _T(".\n"));
 				}
 				else if (info.status == DBI_STATUS_SCRAPEERROR)
 				{
 					strID = _T("scrapeError");
-					LOG(_T("A parsing error occured while identifying ") + mov.strFileName + 
+					LOG(_T("A parsing error occured while identifying ") + mov.strFileName +
 							_T(" on ") + strServ + _T(".\n"));
 				}
 			}
@@ -227,36 +203,22 @@ UINT CALLBACK UpdateThread(void *pParam)
 
 			if (info.status == DBI_STATUS_UPDATED)
 			{
-				if (strTitleServ == strServ)
-					mov.strTitle = info.strTitle;
-				if (strYearServ == strServ)
-				{
-					mov.strYear = info.strYear;
-					mov.nYear = StringToNumber(mov.strYear);
-				}
-				if (strCountriesServ == strServ)
-					mov.strCountries = info.strCountries;
-				if (strGenresServ == strServ)
-					mov.strGenres = info.strGenres;
-				if (strRuntimeServ == strServ)
-					mov.nRuntime = info.nRuntime;
-				if (strStorylineServ == strServ)
-					mov.strStoryline = info.strStoryline;
-				if (strDirectorsServ == strServ)
-					mov.strDirectors = info.strDirectors;
-				if (strWritersServ == strServ)
-					mov.strWriters = info.strWriters;
-				if (strStarsServ == strServ)
-					mov.strStars = info.strStars;
-				if (strPosterServ == strServ)
-					mov.posterData = info.posterData;
-				if (strRatingServ == strServ)
-				{
-					mov.fRating = info.fRating;
-					mov.fRatingMax = info.fRatingMax;
-					mov.nMetascore = info.nMetascore;
-					mov.nVotes = info.nVotes;
-				}
+				mov.strTitle = info.strTitle;
+				mov.strYear = info.strYear;
+				mov.nYear = StringToNumber(mov.strYear);
+				mov.strCountries = info.strCountries;
+				mov.strGenres = info.strGenres;
+				mov.nRuntime = info.nRuntime;
+				mov.strStoryline = info.strStoryline;
+				mov.strDirectors = info.strDirectors;
+				mov.strWriters = info.strWriters;
+				mov.strStars = info.strStars;
+				mov.posterData = info.posterData;
+				mov.fRating = info.fRating;
+				mov.fRatingMax = info.fRatingMax;
+				mov.nMetascore = info.nMetascore;
+				mov.nVotes = info.nVotes;
+
 				if (mov.fIMDbRating == 0.0f && info.fIMDbRating != 0.0f)
 				{
 					if (mov.strIMDbID.IsEmpty() || (mov.strIMDbID == info.strIMDbID))
@@ -268,21 +230,16 @@ UINT CALLBACK UpdateThread(void *pParam)
 					}
 				}
 
-				// Set season and episode for "imdb.com"
-
-				if (strServ == _T("imdb.com"))
+				mov.strContentRating = info.strContentRating;
+				mov.nSeason = info.nSeason;
+				mov.nEpisode = info.nEpisode;
+				mov.strEpisodeName = info.strEpisodeName;
+				mov.strAirDate = info.strAirDate;
+				mov.bType = info.bType;
+				for (int i = 0; i < DBI_STAR_NUMBER; i++)
 				{
-					mov.strContentRating = info.strContentRating;
-					mov.nSeason = info.nSeason;
-					mov.nEpisode = info.nEpisode;
-					mov.strEpisodeName = info.strEpisodeName;
-					mov.strAirDate = info.strAirDate;
-					mov.bType = info.bType;
-					for (int i = 0; i < DBI_STAR_NUMBER; i++)
-					{
-						mov.strActorId[i] = info.strActorId[i];
-						mov.actorImageData[i] = info.actorImageData[i];
-					}
+					mov.strActorId[i] = info.strActorId[i];
+					mov.actorImageData[i] = info.actorImageData[i];
 				}
 			}
 

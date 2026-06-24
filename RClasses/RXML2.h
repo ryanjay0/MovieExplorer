@@ -180,18 +180,32 @@ public:
 	bool Open(S&& sFilePath)
 	{
 		Close();
-		
-		// Read file to string
 
 		RString sFile;
 		if (!FileToString(sFilePath, sFile))
 			return false;
 
-		ASSERT(!sFile.IsEmpty()); // empty XML-file, is this the intention?
+		ASSERT(!sFile.IsEmpty());
 
 		m_sFilePath = forw<S>(sFilePath);
 
-		// Parse file contents
+		return Parse(sFile);
+	}
+
+	template <class S>
+	bool OpenFromStr(S&& sContent)
+	{
+		Close();
+
+		if (sContent.IsEmpty())
+			return false;
+
+		return Parse(sContent);
+	}
+
+	template <class S>
+	bool Parse(S& sFile)
+	{
 
 		const TCHAR *p1, *p2 = sFile, *p3, *p4;
 		RXMLElem2 *pElem = NULL;

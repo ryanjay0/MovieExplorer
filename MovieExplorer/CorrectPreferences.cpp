@@ -69,8 +69,7 @@ bool CorrectPreferences()
 	prefMgr.SetBool(_T("ViewType"), false, false);
 	prefMgr.SetBool(_T("ShowHiddenMovies"), false, false);
 	prefMgr.SetInt(_T("SortBy"), 0, false);
-	prefMgr.SetBool(_T("IMDbUseBingSearch"), true, false);
-	prefMgr.SetBool(_T("IMDbUseOriginalTitle"), false, false);
+	prefMgr.SetStr(_T("OMDbAPIKey"), _T(""), false);
 	prefMgr.SetBool(_T("AutoCategories"), true, false);
 	prefMgr.SetBool(_T("HideUserCategories"), false, false);
 	prefMgr.SetBool(_T("UseVlc"), false, false);

@@ -124,7 +124,7 @@ void CMainWnd::OnActivateApp(BOOL bActive, DWORD dwThreadID)
 	if (GETPREFBOOL(_T("UseVlc")))
 	{
 		Resume resume;
-		resume.ReadThread();
+		resume.ReadVlcResumeFile();
 	}
 
 	if (bActive && GetDB())

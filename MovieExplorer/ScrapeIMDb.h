@@ -1,3 +1,3 @@
 #pragma once
 
-DWORD ScrapeIMDb(DBINFO *pInfo);
+DWORD ScrapeIMDb(DBINFO *pInfo, RString strOMDbAPIKey);

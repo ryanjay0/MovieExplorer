@@ -731,8 +731,9 @@ void CDatabase::UpdateResumeTime(RString strFilePath, UINT64 resumeTime)
 				RString strPath = CorrectPath(dir.strPath + _T("\\") + mov.strFileName);
 				if (strPath == strFilePath)
 				{
-					//Path match
 					mov.resumeTime = resumeTime;
+					if (mov.nRuntime > 0 && resumeTime > 0 && (double)resumeTime >= (double)mov.nRuntime * 60.0 * 0.95)
+						mov.bSeen = true;
 					return;
 				}
 			}
