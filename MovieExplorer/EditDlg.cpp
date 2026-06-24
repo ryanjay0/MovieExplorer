@@ -133,7 +133,17 @@ void CEditDlg::OnRefresh()
 		if (m_pMov->nSeason >= 0 && m_pMov->nEpisode >= 0)
 			DeleteFile(strBase + _T("_S") + NumberToString(m_pMov->nSeason) + _T("_E") + NumberToString(m_pMov->nEpisode) + _T(".xml"));
 	}
+	if (!m_pMov->strTMDBID.IsEmpty() && !strCacheDir.IsEmpty())
+	{
+		RString strID = m_pMov->strTMDBID;
+		RString strBase = strCacheDir + _T("\\tmdb.org\\") + strID;
+		DeleteFile(strBase + _T(".xml"));
+		if (m_pMov->nSeason >= 0 && m_pMov->nEpisode >= 0)
+			DeleteFile(strBase + _T("_S") + NumberToString(m_pMov->nSeason) + _T("_E") + NumberToString(m_pMov->nEpisode) + _T(".xml"));
+	}
 
+	m_pMov->strIMDbID.Empty();
+	m_pMov->strTMDBID.Empty();
 	m_pMov->fIMDbRating = m_pMov->fIMDbRatingMax = 0.0f;
 	m_pMov->fRating = m_pMov->fRatingMax = 0.0f;
 	m_pMov->nMetascore = -1;
@@ -151,6 +161,7 @@ void CEditDlg::OnRefresh()
 		m_pMov->actorImageData[i] = NULL;
 	}
 
+	m_pMov->bOMDbRatingsFetched = false;
 	m_pMov->bUpdated = false;
 
 	GetDB()->Update(m_pMov);

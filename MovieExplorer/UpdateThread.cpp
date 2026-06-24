@@ -3,6 +3,7 @@
 #include "UpdateThread.h"
 #include "ParseFileName.h"
 #include "ScrapeIMDb.h"
+#include "ScrapeTMDB.h"
 #include "ScrapeMovieMeter.h"
 
 static RString GetCacheFileName(RString strCacheDir, RString strServ, RString strID, INT_PTR nSeason, INT_PTR nEpisode)
@@ -20,6 +21,7 @@ UINT CALLBACK UpdateThread(void *pParam)
 	OMDbUsageTracker *pUsage = ((UPDATETHREADDATA*)pParam)->pUsage;
 
 	RString strOMDbAPIKey = GETPREFSTR(_T("OMDbAPIKey"));
+	RString strTMDBAPIKey = GETPREFSTR(_T("TMDBAPIKey"));
 
 	UINT64 nWeeks = (UINT64)GETPREFINT(_T("Database"), _T("MaxInfoAge"));
 	if (nWeeks < 2)
@@ -36,9 +38,12 @@ UINT CALLBACK UpdateThread(void *pParam)
 		servicesInUse.Add(strOnlyUse);
 	else
 	{
+		if (!strTMDBAPIKey.IsEmpty())
+			servicesInUse.Add(_T("tmdb.org"));
 		servicesInUse.Add(_T("imdb.com"));
 		if (!GETPREFSTR(_T("InfoService"), _T("Title")).IsEmpty() &&
-			GETPREFSTR(_T("InfoService"), _T("Title")) != _T("imdb.com"))
+			GETPREFSTR(_T("InfoService"), _T("Title")) != _T("imdb.com") &&
+			GETPREFSTR(_T("InfoService"), _T("Title")) != _T("tmdb.org"))
 			servicesInUse.Add(GETPREFSTR(_T("InfoService"), _T("Title")));
 	}
 
@@ -83,7 +88,9 @@ UINT CALLBACK UpdateThread(void *pParam)
 		{
 			ClearInfo(&info);
 
-			if (strServ == _T("imdb.com"))
+			if (strServ == _T("tmdb.org"))
+				strID = mov.strTMDBID;
+			else if (strServ == _T("imdb.com"))
 				strID = mov.strIMDbID;
 			else if (strServ == _T("moviemeter.nl"))
 				strID = mov.strMovieMeterID;
@@ -167,8 +174,13 @@ UINT CALLBACK UpdateThread(void *pParam)
 				info.strAirDate = strAirDate;
 				info.bType = bType;
 				info.strID = strID;
+				if (strServ == _T("tmdb.org"))
+					info.strIMDbID = mov.strIMDbID;
+				info.bOMDbRatingsFetched = mov.bOMDbRatingsFetched;
 
-				if (strServ == _T("imdb.com"))
+				if (strServ == _T("tmdb.org"))
+					info.status = ScrapeTMDB(&info, strTMDBAPIKey, strOMDbAPIKey, &seriesCache, pUsage);
+				else if (strServ == _T("imdb.com"))
 					info.status = ScrapeIMDb(&info, strOMDbAPIKey, &seriesCache, pUsage);
 				else if (strServ == _T("moviemeter.nl"))
 					info.status = ScrapeMovieMeter(&info);
@@ -271,7 +283,21 @@ UINT CALLBACK UpdateThread(void *pParam)
 				mov.nMetascore = info.nMetascore;
 				mov.nVotes = info.nVotes;
 
-				if (mov.fIMDbRating == 0.0f && info.fIMDbRating != 0.0f)
+				if (strServ == _T("tmdb.org"))
+				{
+					if (!info.strIMDbID.IsEmpty() && info.strIMDbID.Left(2) == _T("tt"))
+						mov.strIMDbID = info.strIMDbID;
+					if (info.fIMDbRating != 0.0f)
+					{
+						mov.fIMDbRating = info.fIMDbRating;
+						mov.fIMDbRatingMax = info.fIMDbRatingMax;
+						mov.nIMDbVotes = info.nIMDbVotes;
+					}
+					if (info.nMetascore > 0)
+						mov.nMetascore = info.nMetascore;
+					mov.bOMDbRatingsFetched = info.bOMDbRatingsFetched;
+				}
+				else if (mov.fIMDbRating == 0.0f && info.fIMDbRating != 0.0f)
 				{
 					if (mov.strIMDbID.IsEmpty() || (mov.strIMDbID == info.strIMDbID))
 					{
@@ -298,7 +324,9 @@ UINT CALLBACK UpdateThread(void *pParam)
 
 			// Save to the right ID
 
-			if (strServ == _T("imdb.com"))
+			if (strServ == _T("tmdb.org"))
+				mov.strTMDBID = strID;
+			else if (strServ == _T("imdb.com"))
 				mov.strIMDbID = strID;
 			else if (strServ == _T("moviemeter.nl"))
 				mov.strMovieMeterID = strID;

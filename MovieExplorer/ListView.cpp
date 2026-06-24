@@ -138,15 +138,27 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 		GetDB()->CancelUpdate();
 		if (!mov.strIMDbID.IsEmpty() && mov.strIMDbID[0] == _T('t'))
 		{
-			RString strCachePath = GetAppPath() + _T("Cache\\") + mov.strIMDbID + _T(".xml");
+			RString strCachePath = GetAppPath() + _T("Cache\\imdb.com\\") + mov.strIMDbID + _T(".xml");
 			DeleteFile(strCachePath);
 			if (!mov.strEpisodeID.IsEmpty())
 			{
-				RString strEpCachePath = GetAppPath() + _T("Cache\\") + mov.strEpisodeID + _T(".xml");
+				RString strEpCachePath = GetAppPath() + _T("Cache\\imdb.com\\") + mov.strEpisodeID + _T(".xml");
+				DeleteFile(strEpCachePath);
+			}
+		}
+		if (!mov.strTMDBID.IsEmpty())
+		{
+			RString strCachePath = GetAppPath() + _T("Cache\\tmdb.org\\") + mov.strTMDBID + _T(".xml");
+			DeleteFile(strCachePath);
+			if (!mov.strEpisodeID.IsEmpty())
+			{
+				RString strEpCachePath = GetAppPath() + _T("Cache\\tmdb.org\\") + mov.strTMDBID + _T("_S") +
+					NumberToString(mov.nSeason) + _T("_E") + NumberToString(mov.nEpisode) + _T(".xml");
 				DeleteFile(strEpCachePath);
 			}
 		}
 		mov.strIMDbID.Empty();
+		mov.strTMDBID.Empty();
 		mov.strTitle.Empty();
 		mov.strYear.Empty();
 		mov.strCountries.Empty();
@@ -165,6 +177,7 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 		mov.nYear = 0; mov.nMetascore = 0;
 		mov.nSeason = 0; mov.nEpisode = 0;
 		mov.nRuntime = 0; mov.bType = 0;
+		mov.bOMDbRatingsFetched = false;
 		mov.bUpdated = false;
 		GetDB()->Update();
 		SetFocus(m_hWnd);

@@ -43,19 +43,18 @@ bool CorrectPreferences()
 	prefMgr.SetInt(_T("Database"), _T("MaxInfoAge"), 2);
 	prefMgr.SetStr(_T("Database"), _T("CacheDirectory"), _T("Cache"), false);
 
-	prefMgr.SetStr(_T("InfoService"), _T("OnlyUse"), _T("imdb.com"), false);
-	//prefMgr.SetStr(_T("InfoService"), _T("Backup"), _T(""), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Title"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Year"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Genres"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Countries"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Runtime"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Storyline"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Directors"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Writers"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Stars"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Poster"), _T("imdb.com"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Rating"), _T("imdb.com"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("OnlyUse"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Title"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Year"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Genres"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Countries"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Runtime"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Storyline"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Directors"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Writers"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Stars"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Poster"), _T("tmdb.org"), false);
+	prefMgr.SetStr(_T("InfoService"), _T("Rating"), _T("tmdb.org"), false);
 
 	prefMgr.SetBool(_T("Search"), _T("Instantly"), true, false);
 	prefMgr.SetBool(_T("Search"), _T("Literally"), false, false);
@@ -67,6 +66,7 @@ bool CorrectPreferences()
 	prefMgr.SetBool(_T("ShowHiddenMovies"), false, false);
 	prefMgr.SetInt(_T("SortBy"), 7, false);
 	prefMgr.SetStr(_T("OMDbAPIKey"), _T(""), false);
+	prefMgr.SetStr(_T("TMDBAPIKey"), _T(""), false);
 	prefMgr.SetInt(_T("OMDbDailyLimit"), 900, false);
 	prefMgr.SetBool(_T("AutoCategories"), true, false);
 	prefMgr.SetBool(_T("HideUserCategories"), false, false);

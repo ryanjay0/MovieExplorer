@@ -105,6 +105,7 @@ void ClearInfo(DBINFO *pInfo)
 	pInfo->strWriters.Empty();
 	pInfo->strYear.Empty();
 	pInfo->timestamp = 0;
+	pInfo->bOMDbRatingsFetched = false;
 }
 
 void ClearMovie(DBMOVIE *pMovie)
@@ -113,6 +114,7 @@ void ClearMovie(DBMOVIE *pMovie)
 	pMovie->bHide = false;
 	pMovie->bSeen = false;
 	pMovie->bUpdated = false;
+	pMovie->bOMDbRatingsFetched = false;
 	pMovie->fileSize = 0;
 	pMovie->fileTime = 0;
 	pMovie->resumeTime = 0;
@@ -143,6 +145,7 @@ void ClearMovie(DBMOVIE *pMovie)
 	pMovie->strGenres.Empty();
 	pMovie->strContentRating.Empty();
 	pMovie->strIMDbID.Empty();
+	pMovie->strTMDBID.Empty();
 	pMovie->strMovieMeterID.Empty();
 	pMovie->nRuntime = 0;
 	pMovie->strStars.Empty();
@@ -186,6 +189,7 @@ void TagToInfo(RXMLTag *pTag, DBINFO *pInfo)
 		pInfo->fIMDbRatingMax = StringToFloat(pTag->GetChildContent(_T("IMDbRatingMax")));
 		pInfo->nIMDbVotes = StringToNumber(pTag->GetChildContent(_T("IMDbVotes")));
 	}
+	pInfo->bOMDbRatingsFetched = StringToNumber(pTag->GetChildContent(_T("OMDbRatingsFetched"))) != 0;
 	pInfo->timestamp = (UINT64)StringToNumber64(pTag->GetChildContent(_T("Timestamp")));
 }
 
@@ -223,6 +227,7 @@ void InfoToTag(DBINFO *pInfo, RXMLTag *pTag)
 		pTag->AddChild(_T("IMDbRatingMax"))->SetContent(FloatToString(pInfo->fIMDbRatingMax));
 		pTag->AddChild(_T("IMDbVotes"))->SetContent(NumberToString(pInfo->nIMDbVotes));
 	}
+	pTag->AddChild(_T("OMDbRatingsFetched"))->SetContent(NumberToString(pInfo->bOMDbRatingsFetched ? 1 : 0));
 	pTag->AddChild(_T("Timestamp"))->SetContent(NumberToString((INT64)pInfo->timestamp));
 }
 
@@ -429,6 +434,7 @@ bool CDatabase::Load(RString_ strFilePath)
 				pMov->bHide = ((RString)pFileTag->GetProperty(_T("hide")) == _T("true"));
 				pMov->bSeen = ((RString)pFileTag->GetProperty(_T("seen")) == _T("true"));
 				pMov->strIMDbID = pFileTag->GetProperty(_T("imdb.com"));
+				pMov->strTMDBID = pFileTag->GetProperty(_T("tmdb.org"));
 				pMov->strMovieMeterID = pFileTag->GetProperty(_T("moviemeter.nl"));
 
 				RXMLTag *pMovieInfoTag = pFileTag->GetChild(_T("MovieInfo"));
@@ -474,12 +480,15 @@ bool CDatabase::Load(RString_ strFilePath)
 						pMov->fIMDbRatingMax = info.fIMDbRatingMax;
 						pMov->nIMDbVotes = info.nIMDbVotes;
 					}
+					pMov->bOMDbRatingsFetched = info.bOMDbRatingsFetched;
 				}
 
 				// Determine if an update is needed
 
 				if ((pMov->strIMDbID == _T("unknown") || pMov->strIMDbID == _T("connError") || 
-						pMov->strIMDbID == _T("scrapeError") || pMov->strIMDbID == _T("rateLimited")) && 
+						pMov->strIMDbID == _T("scrapeError") || pMov->strIMDbID == _T("rateLimited")) &&
+						(pMov->strTMDBID == _T("unknown") || pMov->strTMDBID == _T("connError") ||
+						pMov->strTMDBID == _T("scrapeError") || pMov->strTMDBID.IsEmpty()) &&
 						(pMov->strMovieMeterID == _T("unknown") || 
 						pMov->strMovieMeterID == _T("connError") || 
 						pMov->strMovieMeterID == _T("scrapeError")))
@@ -508,13 +517,20 @@ bool CDatabase::Load(RString_ strFilePath)
 			{
 				mov.pDirectory = &dir;
 
-				if (!mov.strTitle.IsEmpty() && !mov.strIMDbID.IsEmpty() &&
-					mov.strIMDbID != _T("unknown") && mov.strIMDbID != _T("connError") &&
-					mov.strIMDbID != _T("scrapeError") && mov.strIMDbID != _T("rateLimited"))
+				if (!mov.strTitle.IsEmpty() &&
+					((!mov.strIMDbID.IsEmpty() && mov.strIMDbID != _T("unknown") && mov.strIMDbID != _T("connError") &&
+					mov.strIMDbID != _T("scrapeError") && mov.strIMDbID != _T("rateLimited")) ||
+					(!mov.strTMDBID.IsEmpty() && mov.strTMDBID != _T("unknown") && mov.strTMDBID != _T("connError") &&
+					mov.strTMDBID != _T("scrapeError"))))
 				{
-					RString strPosterPath = strCacheDir + _T("\\imdb.com\\") + mov.strIMDbID + _T(".jpg");
+					RString strPosterID = mov.strTMDBID.IsEmpty() ? mov.strIMDbID : mov.strTMDBID;
+					RString strPosterService = mov.strTMDBID.IsEmpty() ? _T("imdb.com") : _T("tmdb.org");
+					RString strPosterPath = strCacheDir + _T("\\") + strPosterService + _T("\\") + strPosterID + _T(".jpg");
 					if (mov.posterData.GetSize() == 0)
-						FileToData(strPosterPath, mov.posterData);
+					{
+						if (!FileToData(strPosterPath, mov.posterData) && strPosterService == _T("tmdb.org") && !mov.strIMDbID.IsEmpty())
+							FileToData(strCacheDir + _T("\\imdb.com\\") + mov.strIMDbID + _T(".jpg"), mov.posterData);
+					}
 
 					for (int i = 0; i < DBI_STAR_NUMBER; i++)
 					{
@@ -524,7 +540,9 @@ bool CDatabase::Load(RString_ strFilePath)
 							mov.actorImageData[i] = GetImageHash()->GetImage(strStarName);
 							if (!mov.actorImageData[i])
 							{
-								RString strActorPath = strCacheDir + _T("\\imdb.com\\actors\\") + strStarName + _T(".jpg");
+								RString strActorPath = strCacheDir + _T("\\") + strPosterService + _T("\\actors\\") + strStarName + _T(".jpg");
+								if (!FileExists(strActorPath) && strPosterService == _T("tmdb.org"))
+									strActorPath = strCacheDir + _T("\\imdb.com\\actors\\") + strStarName + _T(".jpg");
 								if (FileExists(strActorPath))
 								{
 									RArray<BYTE> arTmp;
@@ -605,6 +623,8 @@ bool CDatabase::Save()
 					pFileTag->SetProperty(_T("hide"), _T("true"));
 				if (!mov.strIMDbID.IsEmpty())
 					pFileTag->SetProperty(_T("imdb.com"), mov.strIMDbID);
+				if (!mov.strTMDBID.IsEmpty())
+					pFileTag->SetProperty(_T("tmdb.org"), mov.strTMDBID);
 				if (!mov.strMovieMeterID.IsEmpty())
 					pFileTag->SetProperty(_T("moviemeter.nl"), mov.strMovieMeterID);
 
@@ -612,7 +632,7 @@ bool CDatabase::Save()
 				{
 					DBINFO info;
 					ClearInfo(&info);
-					info.strID = mov.strIMDbID;
+					info.strID = mov.strTMDBID.IsEmpty() ? mov.strIMDbID : mov.strTMDBID;
 					info.strTitle = mov.strTitle;
 					info.strYear = mov.strYear;
 					info.strGenres = mov.strGenres;
@@ -642,6 +662,7 @@ bool CDatabase::Save()
 						info.fIMDbRatingMax = mov.fIMDbRatingMax;
 						info.nIMDbVotes = mov.nIMDbVotes;
 					}
+					info.bOMDbRatingsFetched = mov.bOMDbRatingsFetched;
 					info.timestamp = GetSystemTime();
 					InfoToTag(&info, pFileTag->AddChild(_T("MovieInfo")));
 				}

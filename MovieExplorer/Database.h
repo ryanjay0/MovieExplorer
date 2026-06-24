@@ -56,7 +56,7 @@ struct DBDIRECTORY
 
 struct DBMOVIE
 {
-	RString strFileName, strIMDbID, strMovieMeterID, strTitle, strYear, strCountries, strGenres, strContentRating,
+	RString strFileName, strIMDbID, strTMDBID, strMovieMeterID, strTitle, strYear, strCountries, strGenres, strContentRating,
 			strStoryline, strDirectors, strWriters, strStars, strEpisodeName, strEpisodeID, strAirDate;
 	float fRating, fRatingMax, fIMDbRating, fIMDbRatingMax;
 	INT_PTR nVotes, nIMDbVotes, nYear, nMetascore, nSeason, nEpisode, nRuntime;
@@ -65,7 +65,7 @@ struct DBMOVIE
 	RArray<BYTE>* actorImageData[DBI_STAR_NUMBER];
 	RString strActorId[DBI_STAR_NUMBER];
 	UINT64 fileSize, fileTime, resumeTime;
-	bool bSeen, bHide, bUpdated; // would be great to eliminate bUpdated...
+	bool bSeen, bHide, bUpdated, bOMDbRatingsFetched;
 	DBDIRECTORY *pDirectory;
 };
  
@@ -82,6 +82,7 @@ struct DBINFO
 	RString strActorId[DBI_STAR_NUMBER];
 	DWORD status;
 	UINT64 timestamp;
+	bool bOMDbRatingsFetched;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

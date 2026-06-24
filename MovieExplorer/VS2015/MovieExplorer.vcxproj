@@ -244,6 +244,8 @@
     <ClInclude Include="..\resource.h" />
     <ClInclude Include="..\Resume.h" />
     <ClInclude Include="..\ScrapeIMDb.h" />
+    <ClInclude Include="..\ScrapeTMDB.h" />
+    <ClInclude Include="..\JsonParser.h" />
     <ClInclude Include="..\ScrapeMovieMeter.h" />
     <ClInclude Include="..\ScrollBar.h" />
     <ClInclude Include="..\StatusBar.h" />
@@ -279,6 +281,8 @@
     <ClCompile Include="..\ReBar.cpp" />
     <ClCompile Include="..\Resume.cpp" />
     <ClCompile Include="..\ScrapeIMDb.cpp" />
+    <ClCompile Include="..\ScrapeTMDB.cpp" />
+    <ClCompile Include="..\JsonParser.cpp" />
     <ClCompile Include="..\ScrapeMovieMeter.cpp" />
     <ClCompile Include="..\ScrollBar.cpp" />
     <ClCompile Include="..\StatusBar.cpp" />

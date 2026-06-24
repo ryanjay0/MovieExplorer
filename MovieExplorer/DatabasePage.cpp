@@ -63,6 +63,16 @@ void CDatabasePage::ApplyChanges()
 		bRequireUpdate = true;
 	}
 
+	// TMDBAPIKey
+
+	RString strTMDBAPIKey = m_eTMDBAPIKey.GetText();
+	strTMDBAPIKey.Trim();
+	if (strTMDBAPIKey != GETPREFSTR(_T("TMDBAPIKey")))
+	{
+		SETPREFSTR(_T("TMDBAPIKey"), strTMDBAPIKey);
+		bRequireUpdate = true;
+	}
+
 	// OMDbDailyLimit
 
 	INT_PTR nDailyLimit = StringToNumber(m_eDailyLimit.GetText());
@@ -188,10 +198,13 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 			!m_stcMaxInfoAge.Create<RStatic>(m_hWnd) ||
 			!m_eOMDbAPIKey.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP, WS_EX_CLIENTEDGE) ||
 			!m_stcOMDbAPIKey.Create<RStatic>(m_hWnd) ||
+			!m_eTMDBAPIKey.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP, WS_EX_CLIENTEDGE) ||
+			!m_stcTMDBAPIKey.Create<RStatic>(m_hWnd) ||
 			!m_btnRecheckFailed.Create<RButton>(m_hWnd, WS_TABSTOP) ||
 			!m_stcDailyLimit.Create<RStatic>(m_hWnd) ||
 			!m_eDailyLimit.Create<REdit>(m_hWnd, ES_AUTOHSCROLL|WS_TABSTOP|ES_NUMBER, WS_EX_CLIENTEDGE) ||
 			!m_stcUsageToday.Create<RStatic>(m_hWnd) ||
+			!m_stcAttribution.Create<RStatic>(m_hWnd) ||
 			!m_grpDatabase.Create<RButton>(m_hWnd, BS_GROUPBOX) ||
 
 			!m_cbOnlyUse.Create<RComboBox>(m_hWnd, cbStyle) ||
@@ -235,6 +248,8 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 
 	m_eOMDbAPIKey.SetText(GETPREFSTR(_T("OMDbAPIKey")));
 
+	m_eTMDBAPIKey.SetText(GETPREFSTR(_T("TMDBAPIKey")));
+
 	m_eDailyLimit.SetText(NumberToString(GETPREFINT(_T("OMDbDailyLimit"))));
 
 	m_stcUsageToday.SetText(_T("Used: ") + NumberToString(GetDB()->m_usageTracker.GetCount()) +
@@ -244,6 +259,7 @@ bool CDatabasePage::OnCreate(CREATESTRUCT *pCS)
 	// Populate services combo boxes
 
 	RObArray<RString> services;
+	services.Add(_T("tmdb.org"));
 	services.Add(_T("imdb.com"));
 	services.Add(_T("moviemeter.nl"));
 	services.Add(_T(""));
@@ -322,7 +338,7 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	UNREFERENCED_PARAMETER(type);
 	UNREFERENCED_PARAMETER(cy);
 	int y = DUY(4);
-	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(120));
+	MoveWindow(m_grpDatabase, DUX(4), y, cx - DUX(8), DUY(136));
 	y += DUY(12);
 	MoveWindow(m_stcIndexExtensions, DUX(14), y, DUX(200), DUY(10));
 	y += DUY(11);
@@ -336,13 +352,16 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	MoveStatic(m_stcOMDbAPIKey, DUX(14), y+DUY(2));
 	MoveWindow(m_eOMDbAPIKey, DUX(14) + m_stcOMDbAPIKey.GetWidth() + DUX(4), y, cx - DUX(28) - m_stcOMDbAPIKey.GetWidth() - DUX(4), DUY(12));
 	y += DUY(16);
+	MoveStatic(m_stcTMDBAPIKey, DUX(14), y+DUY(2));
+	MoveWindow(m_eTMDBAPIKey, DUX(14) + m_stcTMDBAPIKey.GetWidth() + DUX(4), y, cx - DUX(28) - m_stcTMDBAPIKey.GetWidth() - DUX(4), DUY(12));
+	y += DUY(16);
 	MoveWindow(m_btnRecheckFailed, DUX(14), y, DUX(80), DUY(12));
 	y += DUY(16);
 	MoveStatic(m_stcDailyLimit, DUX(14), y+DUY(2));
 	MoveWindow(m_eDailyLimit, DUX(14) + m_stcDailyLimit.GetWidth() + DUX(4), y, DUX(40), DUY(12));
 	MoveStatic(m_stcUsageToday, DUX(14) + m_stcDailyLimit.GetWidth() + DUX(4) + DUX(44), y+DUY(2));
 
-	y = DUY(130);
+	y = DUY(146);
 	MoveWindow(m_grpInfoService, DUX(4), y, cx - DUX(8), DUY(112));
 	y += DUY(12);
 	MoveWindow(m_stcOnlyUse, DUX(14), y+DUY(1)+1, DUX(60), DUY(10));
@@ -376,6 +395,9 @@ void CDatabasePage::OnSize(DWORD type, WORD cx, WORD cy)
 	MoveWindow(m_stcStoryline, DUX(14), y+DUY(1)+1, DUX(60), DUY(10));
 	MoveWindow(m_cbStoryline, DUX(74), y, DUX(60), DUY(12));
 
+	y = DUY(264);
+	MoveStatic(m_stcAttribution, DUX(14), y+DUY(2));
+
 	PostMessage(m_hWnd, WM_PAINT);
 	PostChildren(m_hWnd, WM_PAINT);
 }
@@ -388,6 +410,7 @@ void CDatabasePage::OnPrefChanged()
 	m_chkIndexDirectories.SetText(_T(" ") + GETSTR(IDS_INDEXDIRECTORIES));
 	m_stcMaxInfoAge.SetText(GETSTR(IDS_MAXINFOAGE) + _T(":"));
 	m_stcOMDbAPIKey.SetText(_T("OMDb API Key:"));
+	m_stcTMDBAPIKey.SetText(_T("TMDB API Key:"));
 	m_btnRecheckFailed.SetText(_T("Recheck Failed"));
 	m_stcDailyLimit.SetText(_T("Daily API Limit:"));
 	m_stcUsageToday.SetText(_T("Used: ") + NumberToString(GetDB()->m_usageTracker.GetCount()) +
@@ -419,6 +442,7 @@ void CDatabasePage::OnPrefChanged()
 	m_cbPoster.SetText(m_cbPoster.GetCount()-1, GETSTR(IDS_NONE));
 	m_cbRating.SetText(m_cbRating.GetCount()-1, GETSTR(IDS_NONE));
 	m_grpInfoService.SetText(GETSTR(IDS_INFOSERVICE));
+	m_stcAttribution.SetText(_T("Data from TMDB / OMDb"));
 
 	RECT rc;
 	GetClientRect(m_hWnd, &rc);
@@ -466,9 +490,12 @@ void CDatabasePage::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 					foreach (dir.movies, mov)
 					{
 						if (mov.strIMDbID == _T("unknown") || mov.strIMDbID == _T("connError") ||
-							mov.strIMDbID == _T("scrapeError") || mov.strIMDbID == _T("rateLimited"))
+							mov.strIMDbID == _T("scrapeError") || mov.strIMDbID == _T("rateLimited") ||
+							mov.strTMDBID == _T("unknown") || mov.strTMDBID == _T("connError") ||
+							mov.strTMDBID == _T("scrapeError"))
 						{
 							mov.strIMDbID.Empty();
+							mov.strTMDBID.Empty();
 							mov.bUpdated = false;
 							nCount++;
 						}
