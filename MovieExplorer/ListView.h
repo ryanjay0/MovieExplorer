@@ -28,6 +28,7 @@ protected:
 	void OnSize(DWORD type, WORD cx, WORD cy);
 	void OnTouch(WORD nInputs, HTOUCHINPUT hTouchInput);
 	void OnTimer(UINT_PTR nIDEvent);
+	void OnDestroy();
 	void OnVScroll(WORD scrollCode, WORD pos, HWND hWndScrollBar);
 	void OnKeyDown(UINT, WORD, UINT);
 	LRESULT WndProc(UINT Msg, WPARAM wParam, LPARAM lParam);

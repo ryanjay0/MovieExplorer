@@ -74,6 +74,20 @@ CListView::~CListView()
 {
 }
 
+void CListView::OnDestroy()
+{
+	KillTimer(m_hWnd, VLC_EXIT_TIMER_ID);
+	KillTimer(m_hWnd, TOUCH_SCROLL_TIMER_ID);
+	if (resume.processInfo.hProcess)
+	{
+		CloseHandle(resume.processInfo.hProcess);
+		CloseHandle(resume.processInfo.hThread);
+		resume.processInfo.hProcess = NULL;
+		resume.processInfo.hThread = NULL;
+	}
+	RWindow::OnDestroy();
+}
+
 
 void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 {
@@ -645,7 +659,6 @@ void CListView::OnTimer(UINT_PTR nIDEvent)
 				resume.processInfo.hThread = NULL;
 				KillTimer(m_hWnd, VLC_EXIT_TIMER_ID);
 				resume.ReadVlcResumeFile();
-				GetDB()->Filter();
 				PostMessage(GetMainWnd(), WM_DBUPDATED);
 			}
 		}
