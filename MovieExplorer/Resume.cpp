@@ -16,25 +16,29 @@ void Resume::ReadVlcResumeFile()
 	DWORD username_len = UNLEN + 1;
 	GetUserName(username, &username_len);
 
-	RString strTemp;
-	RString strVlcFile;
-
 	RString strFilePath = _T("C:\\Users\\");
 	strFilePath += username;
 	strFilePath += _T("\\AppData\\Roaming\\vlc\\vlc-qt-interface.ini");
 
+	RString strVlcFile;
 	if (!FileToString(strFilePath, strVlcFile))
 		return;
 
 	RArray<RString> moviesArr;
 	RArray<int> timesArr;
 
-	if (GetFirstMatch(strVlcFile, _T("list=([^$]*?$)"), &strTemp))
+	INT_PTR nPos = strVlcFile.Find(_T("list="));
+	if (nPos >= 0)
 	{
-		strTemp.Replace(_T(" "), _T(""));
-		RArray<const TCHAR*> moviesTemp = SplitString(strTemp, _T(","), true);
+		nPos += 5;
+		INT_PTR nLineEnd = strVlcFile.Find(_T('\n'), nPos);
+		if (nLineEnd < 0) nLineEnd = strVlcFile.GetLength();
+		RString strList = strVlcFile.Mid(nPos, nLineEnd - nPos);
+		strList.Trim();
+		strList.Replace(_T(" "), _T(""));
 
-		for(int i = 0; i < moviesTemp.GetSize(); i++)
+		RArray<const TCHAR*> moviesTemp = SplitString(strList, _T(","), true);
+		for (int i = 0; i < moviesTemp.GetSize(); i++)
 		{
 			RString strTempMovie = URLDecode(moviesTemp[i]);
 
@@ -43,25 +47,28 @@ void Resume::ReadVlcResumeFile()
 			else if (strTempMovie.Left(7) == _T("file://"))
 				strTempMovie = strTempMovie.Right(strTempMovie.GetLength() - 7);
 
-			strTempMovie.Replace(_T("/"), _T("\\\\"));
+			strTempMovie = CorrectPath(strTempMovie);
 			moviesArr.Add(strTempMovie);
 		}
 	}
 
-	if (GetFirstMatch(strVlcFile, _T("times=([^$]*?$)"), &strTemp))
+	nPos = strVlcFile.Find(_T("times="));
+	if (nPos >= 0)
 	{
-		strTemp.Replace(_T(" "), _T(""));
-		RArray<const TCHAR*> strTimes = SplitString(strTemp, _T(","), true);
-		for(int i = 0; i < strTimes.GetSize(); i++)
-			timesArr.Add((int)(StringToNumber(strTimes[i]) / 1000));
+		nPos += 6;
+		INT_PTR nLineEnd = strVlcFile.Find(_T('\n'), nPos);
+		if (nLineEnd < 0) nLineEnd = strVlcFile.GetLength();
+		RString strTimes = strVlcFile.Mid(nPos, nLineEnd - nPos);
+		strTimes.Trim();
+		strTimes.Replace(_T(" "), _T(""));
+
+		RArray<const TCHAR*> strTimesArr = SplitString(strTimes, _T(","), true);
+		for (int i = 0; i < strTimesArr.GetSize(); i++)
+			timesArr.Add((int)(StringToNumber(strTimesArr[i]) / 1000));
 	}
 
 	for (int i = 0; i < moviesArr.GetSize() && i < timesArr.GetSize(); i++)
-	{
-		RString tempMovieStr = moviesArr[i];
-		tempMovieStr.Replace(_T("\\\\"), _T("\\"));
-		GetDB()->UpdateResumeTime(tempMovieStr, timesArr[i]);
-	}
+		GetDB()->UpdateResumeTime(moviesArr[i], timesArr[i]);
 }
 
 void Resume::LaunchVlc(RString strFilePath, UINT64 resumeTime)
