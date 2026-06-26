@@ -1329,8 +1329,8 @@ void CDatabase::Filter()
 								if (_tcsicmp(str1, str2) < 0)
 									{pAddTo->InsertAt(i, &mov); bInserted = true; break;}
 							}
-							else if (mov.fileTime > pMov->fileTime)
-								{pAddTo->InsertAt(i, &mov); bInserted = true; break;}
+						else if (mov.fileTime < pMov->fileTime)
+							{pAddTo->InsertAt(i, &mov); bInserted = true; break;}
 						}
 
 						if (!bInserted)
@@ -1354,7 +1354,7 @@ void CDatabase::Filter()
 								if (_tcsicmp(str1, str2) < 0)
 									{pAddTo->InsertAt(i, &mov); bInserted = true; break;}
 							}
-							else if (mov.fileTime < pMov->fileTime)
+							else if (mov.fileTime > pMov->fileTime)
 								{pAddTo->InsertAt(i, &mov); bInserted = true; break;}
 						}
 

@@ -121,14 +121,14 @@ void CMainWnd::OnActivateApp(BOOL bActive, DWORD dwThreadID)
 	UNREFERENCED_PARAMETER(dwThreadID);
 
 	
-	if (GETPREFBOOL(_T("UseVlc")))
-	{
-		Resume resume;
-		resume.ReadVlcResumeFile();
-	}
-
 	if (bActive && GetDB())
 	{
+		if (GETPREFBOOL(_T("UseVlc")))
+		{
+			Resume resume;
+			resume.ReadVlcResumeFile();
+		}
+
 		LOG(_T("Refreshing Database...\n"));
 		GetDB()->SyncAndUpdate();
 	}
