@@ -3,7 +3,6 @@
 #include "ListView.h"
 #include "EditDlg.h"
 #include "ToolTip.h"
-#include "Resume.h"
 
 #define LV_SMALL_STAR_SIZE		16
 #define LV_LARGE_STAR_SIZE		24
