@@ -66,6 +66,14 @@ void Resume::ReadVlcResumeFile()
 
 void Resume::LaunchVlc(RString strFilePath, UINT64 resumeTime)
 {
+	if (processInfo.hProcess)
+	{
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+		processInfo.hProcess = NULL;
+		processInfo.hThread = NULL;
+	}
+
 	RString path = GETPREFSTR(_T("Resume"), _T("VlcPath"));
 	RString cmd = path + _T(" \"") + strFilePath + _T("\" --play-and-exit");
 	if (resumeTime > 0)

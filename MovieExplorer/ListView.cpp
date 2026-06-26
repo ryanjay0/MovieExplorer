@@ -24,6 +24,7 @@
 #define BUTTON_ID_REFRESH		7
 
 #define TOUCH_SCROLL_TIMER_ID	1
+#define VLC_EXIT_TIMER_ID		2
 
 bool IsValidId(RString id)
 {
@@ -99,7 +100,10 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 			if (FileExists(strFilePath))
 			{
 				if (m_bUseVlc)
-				resume.LaunchVlc(strFilePath, mov.resumeTime);
+				{
+					resume.LaunchVlc(strFilePath, mov.resumeTime);
+					SetTimer(m_hWnd, VLC_EXIT_TIMER_ID, 2000, NULL);
+				}
 				else
 					ShellExecute(HWND_DESKTOP, _T("open"), strFilePath, NULL, NULL, SW_SHOW);
 			}
@@ -628,6 +632,28 @@ void CListView::OnTouch(WORD nInputs, HTOUCHINPUT hTouchInput)
 
 void CListView::OnTimer(UINT_PTR nIDEvent)
 {
+	if (nIDEvent == VLC_EXIT_TIMER_ID)
+	{
+		if (resume.processInfo.hProcess)
+		{
+			DWORD exitCode;
+			if (GetExitCodeProcess(resume.processInfo.hProcess, &exitCode) && exitCode != STILL_ACTIVE)
+			{
+				CloseHandle(resume.processInfo.hProcess);
+				CloseHandle(resume.processInfo.hThread);
+				resume.processInfo.hProcess = NULL;
+				resume.processInfo.hThread = NULL;
+				KillTimer(m_hWnd, VLC_EXIT_TIMER_ID);
+				resume.ReadVlcResumeFile();
+				GetDB()->Filter();
+				PostMessage(GetMainWnd(), WM_DBUPDATED);
+			}
+		}
+		else
+			KillTimer(m_hWnd, VLC_EXIT_TIMER_ID);
+		return;
+	}
+
 	ASSERT(nIDEvent == TOUCH_SCROLL_TIMER_ID);
 
 	// Scroll

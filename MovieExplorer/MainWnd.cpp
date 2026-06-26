@@ -123,14 +123,6 @@ void CMainWnd::OnActivateApp(BOOL bActive, DWORD dwThreadID)
 	
 	if (bActive && GetDB())
 	{
-		GetDB()->CancelUpdate();
-
-		if (GETPREFBOOL(_T("UseVlc")))
-		{
-			Resume resume;
-			resume.ReadVlcResumeFile();
-		}
-
 		LOG(_T("Refreshing Database...\n"));
 		GetDB()->SyncAndUpdate();
 	}
