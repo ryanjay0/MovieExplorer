@@ -123,6 +123,8 @@ void CMainWnd::OnActivateApp(BOOL bActive, DWORD dwThreadID)
 	
 	if (bActive && GetDB())
 	{
+		GetDB()->CancelUpdate();
+
 		if (GETPREFBOOL(_T("UseVlc")))
 		{
 			Resume resume;
