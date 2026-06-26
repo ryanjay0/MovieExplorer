@@ -855,30 +855,6 @@ void CDatabase::SyncAndUpdate()
 	Update();
 }
 
-void CDatabase::UpdateResumeTime(RString strFilePath, UINT64 resumeTime)
-//takes an input file path and resumeTime.
-//finds the database movie record corresponding to that file path and
-//updates its resumeTime.
-{
-	foreach(m_categories, cat)
-	{
-		foreach(cat.directories, dir)
-		{
-			foreach(dir.movies, mov)
-			{
-				RString strPath = CorrectPath(dir.strPath + _T("\\") + mov.strFileName);
-				if (strPath == strFilePath)
-				{
-					mov.resumeTime = resumeTime;
-					if (mov.nRuntime > 0 && resumeTime > 0 && (double)resumeTime >= (double)mov.nRuntime * 60.0 * 0.95)
-						mov.bSeen = true;
-					return;
-				}
-			}
-		}
-	}
-}
-
 void CDatabase::Update()
 {
 	LOG(_T("\nCollecting and updating movie information...\n"));

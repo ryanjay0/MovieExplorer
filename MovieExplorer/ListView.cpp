@@ -24,7 +24,6 @@
 #define BUTTON_ID_REFRESH		7
 
 #define TOUCH_SCROLL_TIMER_ID	1
-#define VLC_EXIT_TIMER_ID		2
 
 bool IsValidId(RString id)
 {
@@ -74,20 +73,6 @@ CListView::~CListView()
 {
 }
 
-void CListView::OnDestroy()
-{
-	KillTimer(m_hWnd, VLC_EXIT_TIMER_ID);
-	KillTimer(m_hWnd, TOUCH_SCROLL_TIMER_ID);
-	if (resume.processInfo.hProcess)
-	{
-		CloseHandle(resume.processInfo.hProcess);
-		CloseHandle(resume.processInfo.hThread);
-		resume.processInfo.hProcess = NULL;
-		resume.processInfo.hThread = NULL;
-	}
-	RWindow::OnDestroy();
-}
-
 
 void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 {
@@ -112,15 +97,7 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 			// so user can choose the file manually.
 			
 			if (FileExists(strFilePath))
-			{
-				if (m_bUseVlc)
-				{
-					resume.LaunchVlc(strFilePath, mov.resumeTime);
-					SetTimer(m_hWnd, VLC_EXIT_TIMER_ID, 2000, NULL);
-				}
-				else
-					ShellExecute(HWND_DESKTOP, _T("open"), strFilePath, NULL, NULL, SW_SHOW);
-			}
+				ShellExecute(HWND_DESKTOP, _T("open"), strFilePath, NULL, NULL, SW_SHOW);
 		}
 		SetFocus(m_hWnd);
 	}
@@ -477,7 +454,6 @@ void CListView::OnPrefChanged()
 	//Advanced options
 
 	m_bHideUserCategories = GETPREFBOOL(_T("HideUserCategories"));
-	m_bUseVlc = GETPREFBOOL(_T("UseVlc"));
 
 
 	OnScaleChanged();
@@ -646,27 +622,6 @@ void CListView::OnTouch(WORD nInputs, HTOUCHINPUT hTouchInput)
 
 void CListView::OnTimer(UINT_PTR nIDEvent)
 {
-	if (nIDEvent == VLC_EXIT_TIMER_ID)
-	{
-		if (resume.processInfo.hProcess)
-		{
-			DWORD exitCode;
-			if (GetExitCodeProcess(resume.processInfo.hProcess, &exitCode) && exitCode != STILL_ACTIVE)
-			{
-				CloseHandle(resume.processInfo.hProcess);
-				CloseHandle(resume.processInfo.hThread);
-				resume.processInfo.hProcess = NULL;
-				resume.processInfo.hThread = NULL;
-				KillTimer(m_hWnd, VLC_EXIT_TIMER_ID);
-				resume.ReadVlcResumeFile();
-				PostMessage(GetMainWnd(), WM_DBUPDATED);
-			}
-		}
-		else
-			KillTimer(m_hWnd, VLC_EXIT_TIMER_ID);
-		return;
-	}
-
 	ASSERT(nIDEvent == TOUCH_SCROLL_TIMER_ID);
 
 	// Scroll
@@ -949,32 +904,6 @@ void CListView::Draw()
 			nOffsetT += szT.cx + SCX(10);
 		}
 
-		if (mov.nRuntime != 0 && mov.resumeTime > 0)
-		{
-			double dPct = (double)mov.resumeTime / ((double)mov.nRuntime * 60.0);
-			if (dPct > 1.0) dPct = 1.0;
-			int nBarMaxW = SCX(100);
-			int nBarH = SCY(6);
-			int nBarX = SCX(200) + SCX(35) + nOffsetT;
-			int nBarY = y + SCY(87);
-
-			FillSolidRect(m_mdc, nBarX, nBarY, nBarMaxW, nBarH, m_clrShadow);
-			int nFillW = (int)(nBarMaxW * dPct);
-			COLORREF clrBar;
-			if (dPct >= 0.95)
-				clrBar = m_clrGood;
-			else if (dPct >= 0.5)
-				clrBar = m_clrNeutral;
-			else
-				clrBar = m_clrText;
-			if (nFillW > 0)
-				FillSolidRect(m_mdc, nBarX, nBarY, nFillW, nBarH, clrBar);
-
-			RString strPct = NumberToString((INT64)(dPct * 100.0)) + _T("%");
-			GetTextExtentPoint32(m_mdc, strPct, &szT);
-			TextOut(m_mdc, nBarX + nBarMaxW + SCX(6), y + SCY(84), strPct);
-			nOffsetT += nBarMaxW + szT.cx + SCX(16);
-		}
 		// draw storyline
 
 		hPrevFont = (HFONT)SelectObject(m_mdc, m_fntText);

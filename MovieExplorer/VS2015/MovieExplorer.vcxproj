@@ -242,7 +242,6 @@
     <ClInclude Include="..\ParseFileName.h" />
     <ClInclude Include="..\ReBar.h" />
     <ClInclude Include="..\resource.h" />
-    <ClInclude Include="..\Resume.h" />
     <ClInclude Include="..\ScrapeIMDb.h" />
     <ClInclude Include="..\ScrapeTMDB.h" />
     <ClInclude Include="..\JsonParser.h" />
@@ -278,7 +277,6 @@
     <ClCompile Include="..\OptionsDlg.cpp" />
     <ClCompile Include="..\ParseFileName.cpp" />
     <ClCompile Include="..\ReBar.cpp" />
-    <ClCompile Include="..\Resume.cpp" />
     <ClCompile Include="..\ScrapeIMDb.cpp" />
     <ClCompile Include="..\ScrapeTMDB.cpp" />
     <ClCompile Include="..\JsonParser.cpp" />

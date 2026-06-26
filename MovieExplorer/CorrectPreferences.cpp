@@ -59,8 +59,6 @@ bool CorrectPreferences()
 	prefMgr.SetInt(_T("OMDbDailyLimit"), 900, false);
 	prefMgr.SetBool(_T("AutoCategories"), true, false);
 	prefMgr.SetBool(_T("HideUserCategories"), false, false);
-	prefMgr.SetBool(_T("UseVlc"), false, false);
-	prefMgr.SetStr(_T("Resume"), _T("VlcPath"), _T("C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"), false);
 
 	prefMgr.SetInt(_T("TouchScrollElapse"), 10, false);
 	prefMgr.SetFloat(_T("TouchScrollCoeff"), 0.95f, false);

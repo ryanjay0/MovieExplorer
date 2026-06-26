@@ -101,7 +101,6 @@ public:
 	void Unload();
 	bool Save();
 	void SyncAndUpdate();
-	void UpdateResumeTime(RString strFilePath, UINT64 resumeTime);
 	void Update();
 	void Update(DBMOVIE *pMov);
 	void CancelUpdate();
