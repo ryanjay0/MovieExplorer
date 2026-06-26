@@ -9,7 +9,5 @@ class Resume
 
 		Resume();
 		void ReadVlcResumeFile();
-		void UpdateResumeTimes();
 		void LaunchVlc(RString strFileName, UINT64 resumeTime);
-		void WaitForExitAndRead();
 };

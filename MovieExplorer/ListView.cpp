@@ -99,10 +99,7 @@ void CListView::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 			if (FileExists(strFilePath))
 			{
 				if (m_bUseVlc)
-				{
-					resume.LaunchVlc(strFilePath, mov.resumeTime);
-					resume.WaitForExitAndRead();
-				}
+				resume.LaunchVlc(strFilePath, mov.resumeTime);
 				else
 					ShellExecute(HWND_DESKTOP, _T("open"), strFilePath, NULL, NULL, SW_SHOW);
 			}
@@ -1130,10 +1127,12 @@ void CListView::Draw()
 
 		// draw rating
 
-		if (mov.fRating != 0.0f || mov.nVotes != 0)
+		if (mov.fRating != 0.0f || mov.nVotes != 0 || mov.fIMDbRating != 0.0f)
 		{
-			float fRating = mov.fRating;
-			float fRatingMax = mov.fRatingMax;
+			bool bUseIMDb = (mov.fIMDbRating != 0.0f);
+			float fRating = bUseIMDb ? mov.fIMDbRating : mov.fRating;
+			float fRatingMax = bUseIMDb ? mov.fIMDbRatingMax : mov.fRatingMax;
+			INT_PTR nVotes = bUseIMDb ? mov.nIMDbVotes : mov.nVotes;
 
 			if (m_bNormalizeRatings)
 			{
@@ -1187,7 +1186,7 @@ void CListView::Draw()
 
 			// draw rating text of active service (right aligned)
 
-			RString str = _T(" (") + NumberToString(mov.nVotes) + _T(" ") + 
+			RString str = _T(" (") + NumberToString(nVotes) + _T(" ") + 
 					GETSTR(IDS_VOTES) + _T(")");
 			hPrevFont = (HFONT)SelectObject(m_mdc, m_fntText);
 			SetTextColor(m_mdc, m_clrText);
@@ -1196,7 +1195,7 @@ void CListView::Draw()
 			TextOut(m_mdc, x, y + SCY(48), str);
 			SelectObject(m_mdc, hPrevFont);
 
-			if (!(mov.nVotes == 0 && mov.fRating == 0 ))
+			if (!(nVotes == 0 && fRating == 0 ))
 			{
 				if (fRatingMax <= 5.0f)
 					_stprintf(str.GetBuffer(32), _T("%.2f"), fRating);
@@ -1292,45 +1291,6 @@ void CListView::Draw()
 				TextOut(m_mdc, nRectMiddle - nTextMiddle, nRectMiddleY - nTextMiddleY, pMetascoreLink2->strText);
 				SelectObject(m_mdc, hPrevFont);
 
-			}
-			else if (mov.fIMDbRating != 0.0f)
-			{
-				// Draw IMDb rating if active service is not IMDb
-
-				RString str = _T(" (") + NumberToString(mov.nIMDbVotes) + _T(" ") + 
-						GETSTR(IDS_VOTES) + _T(")");
-				hPrevFont = (HFONT)SelectObject(m_mdc, m_fntText);
-				SetTextColor(m_mdc, m_clrText);
-				GetTextExtentPoint32(m_mdc, str, &sz);
-				int x = cx - sz.cx - SCX(15);
-				TextOut(m_mdc, x, y + SCY(66), str);
-				SelectObject(m_mdc, hPrevFont);
-			
-				_stprintf(str.GetBuffer(32), _T("%.1f"), mov.fIMDbRating);
-				str.ReleaseBuffer();
-				str.Replace(_T("."), GetDecimalSep());
-				hPrevFont = (HFONT)SelectObject(m_mdc, m_fntTextBold);
-				GetTextExtentPoint32(m_mdc, str, &sz);
-				x -= sz.cx;
-				SetTextColor(m_mdc, m_clrText);
-				TextOut(m_mdc, x, y + SCY(66), str);
-				SelectObject(m_mdc, hPrevFont);
-
-				str = _T(": ");
-				hPrevFont = (HFONT)SelectObject(m_mdc, m_fntText);
-				GetTextExtentPoint32(m_mdc, str, &sz);
-				SetTextColor(m_mdc, m_clrText);
-				x -= sz.cx;
-				TextOut(m_mdc, x, y + SCY(66), str);
-				SelectObject(m_mdc, hPrevFont);
-
-				hPrevFont = (HFONT)SelectObject(m_mdc, m_fntText);
-				GetTextExtentPoint32(m_mdc, _T("IMDb") , &sz);
-				LINK *pLink = MakeLink(_T("IMDb"), _T("http://www.imdb.com/title/") + mov.strIMDbID + _T("/"),
-					x - sz.cx, sz.cx, y + SCY(66), sz.cy, pt);
-				SetTextColor(m_mdc, (pLink->state == LINKSTATE_HOVER ? m_clrLink : m_clrText));
-				TextOut(m_mdc, pLink->rc.x, pLink->rc.y, pLink->strText);
-				SelectObject(m_mdc, hPrevFont);
 			}
 		}
 

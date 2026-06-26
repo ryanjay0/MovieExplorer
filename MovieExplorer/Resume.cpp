@@ -41,7 +41,7 @@ void Resume::ReadVlcResumeFile()
 			if (strTempMovie.Left(8) == _T("file:///"))
 				strTempMovie = strTempMovie.Right(strTempMovie.GetLength() - 8);
 			else if (strTempMovie.Left(7) == _T("file://"))
-				strTempMovie = strTempMovie.Right(strTempMovie.GetLength() - 5);
+				strTempMovie = strTempMovie.Right(strTempMovie.GetLength() - 7);
 
 			strTempMovie.Replace(_T("/"), _T("\\\\"));
 			moviesArr.Add(strTempMovie);
@@ -64,32 +64,16 @@ void Resume::ReadVlcResumeFile()
 	}
 }
 
-void Resume::UpdateResumeTimes()
-{
-}
-
 void Resume::LaunchVlc(RString strFilePath, UINT64 resumeTime)
 {
 	RString path = GETPREFSTR(_T("Resume"), _T("VlcPath"));
-	RString cmd = path + _T(" \"") + strFilePath + _T("\" --play-and-exit --start-time=") + NumberToString((INT64)resumeTime);
+	RString cmd = path + _T(" \"") + strFilePath + _T("\" --play-and-exit");
+	if (resumeTime > 0)
+		cmd += _T(" --start-time=") + NumberToString((INT64)resumeTime);
 
 	TCHAR* param = new TCHAR[cmd.GetLength() + 1];
 	_tcscpy(param, cmd);
 
 	CreateProcess(NULL, param, NULL, NULL, FALSE, 0, NULL, NULL, &info, &processInfo);
-	delete(param);
-}
-
-void Resume::WaitForExitAndRead()
-{
-	if (processInfo.hProcess)
-	{
-		WaitForSingleObject(processInfo.hProcess, INFINITE);
-		CloseHandle(processInfo.hProcess);
-		CloseHandle(processInfo.hThread);
-		processInfo.hProcess = NULL;
-		processInfo.hThread = NULL;
-	}
-
-	ReadVlcResumeFile();
+	delete[] param;
 }
