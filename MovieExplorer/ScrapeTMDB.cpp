@@ -338,7 +338,7 @@ static void TMDBParseCredits(JsonDoc &doc, DBINFO *pInfo)
 			{
 				RString strPath = doc.NGetStr(cIdx, L"profile_path").c_str();
 				strActorPaths[nStarCount] = strPath;
-				pInfo->strActorId[nStarCount] = strName;
+				pInfo->strActorId[nStarCount] = NumberToString(doc.NGetInt(cIdx, L"id", 0));
 			}
 			nStarCount++;
 		}

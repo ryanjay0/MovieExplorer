@@ -405,7 +405,6 @@ void CListView::OnPrefChanged()
 	m_aPosterShadow = GETTHEMEALPHA(_T("ListView"), _T("PosterShadowAlpha"));
 
 	m_bNormalizeRatings = GETPREFBOOL(_T("NormalizeRatings"));
-	m_strRatingServ = GETPREFSTR(_T("InfoService"), _T("Rating"));
 
 	m_clrTitle = GETTHEMECOLOR(_T("ListView"), _T("TitleFontColor"));
 	m_clrText = GETTHEMECOLOR(_T("ListView"), _T("TextFontColor"));
@@ -450,30 +449,9 @@ void CListView::OnPrefChanged()
 
 	// Determine the services that are in use
 
-	RString strTitleServ = GETPREFSTR(_T("InfoService"), _T("Title"));
-	RString strYearServ = GETPREFSTR(_T("InfoService"), _T("Year"));
-	RString strCountriesServ = GETPREFSTR(_T("InfoService"), _T("Countries"));
-	RString strGenresServ = GETPREFSTR(_T("InfoService"), _T("Genres"));
-	RString strRuntimeServ = GETPREFSTR(_T("InfoService"), _T("Runtime"));
-	RString strStorylineServ = GETPREFSTR(_T("InfoService"), _T("Storyline"));
-	RString strDirectorsServ = GETPREFSTR(_T("InfoService"), _T("Directors"));
-	RString strWritersServ = GETPREFSTR(_T("InfoService"), _T("Writers"));
-	RString strStarsServ = GETPREFSTR(_T("InfoService"), _T("Stars"));
-	RString strPosterServ = GETPREFSTR(_T("InfoService"), _T("Poster"));
-	RString strRatingServ = GETPREFSTR(_T("InfoService"), _T("Rating"));
-	
 	m_servicesInUse.SetSize(0);
-	if (m_servicesInUse.IndexOf(strTitleServ) == -1) m_servicesInUse.Add(strTitleServ);
-	if (m_servicesInUse.IndexOf(strYearServ) == -1) m_servicesInUse.Add(strYearServ);
-	if (m_servicesInUse.IndexOf(strCountriesServ) == -1) m_servicesInUse.Add(strCountriesServ);
-	if (m_servicesInUse.IndexOf(strGenresServ) == -1) m_servicesInUse.Add(strGenresServ);
-	if (m_servicesInUse.IndexOf(strRuntimeServ) == -1) m_servicesInUse.Add(strRuntimeServ);
-	if (m_servicesInUse.IndexOf(strStorylineServ) == -1) m_servicesInUse.Add(strStorylineServ);
-	if (m_servicesInUse.IndexOf(strDirectorsServ) == -1) m_servicesInUse.Add(strDirectorsServ);
-	if (m_servicesInUse.IndexOf(strWritersServ) == -1) m_servicesInUse.Add(strWritersServ);
-	if (m_servicesInUse.IndexOf(strStarsServ) == -1) m_servicesInUse.Add(strStarsServ);
-	if (m_servicesInUse.IndexOf(strPosterServ) == -1) m_servicesInUse.Add(strPosterServ);
-	if (m_servicesInUse.IndexOf(strRatingServ) == -1) m_servicesInUse.Add(strRatingServ);
+	m_servicesInUse.Add(_T("tmdb.org"));
+	m_servicesInUse.Add(_T("imdb.com"));
 
 	// Get touch scroll preferences
 
@@ -1063,7 +1041,14 @@ void CListView::Draw()
 						mdcThumb.GetDimensions(cxImg, cyImg);
 						BitBlt(m_mdc, nX, nY, cxImg, cyImg, mdcThumb, 0, 0, SRCCOPY);
 						if(!mov.strActorId[i].IsEmpty())
-							MakeLink(_T(""), _T("http://www.imdb.com/name/") + mov.strActorId[i], nX, cxImg, nY, cyImg, pt);
+						{
+							RString strActorURL;
+							if (mov.strActorId[i].Left(2) == _T("nm"))
+								strActorURL = _T("http://www.imdb.com/name/") + mov.strActorId[i];
+							else
+								strActorURL = _T("https://www.themoviedb.org/person/") + mov.strActorId[i];
+							MakeLink(_T(""), strActorURL, nX, cxImg, nY, cyImg, pt);
+						}
 						nX += SCX(32);
 					}
 					else
@@ -1081,7 +1066,12 @@ void CListView::Draw()
 
 					if (!mov.strActorId[i].IsEmpty())
 					{
-						LINK *pImageLinkText = MakeLink(strStar, _T("http://www.imdb.com/name/") + mov.strActorId[i],
+						RString strActorURL;
+						if (mov.strActorId[i].Left(2) == _T("nm"))
+							strActorURL = _T("http://www.imdb.com/name/") + mov.strActorId[i];
+						else
+							strActorURL = _T("https://www.themoviedb.org/person/") + mov.strActorId[i];
+						LINK *pImageLinkText = MakeLink(strStar, strActorURL,
 							nX, sz.cx, y + SCY(LV_DETAILS_HEIGHT) - SCY(54), sz.cy, pt);
 						SetTextColor(m_mdc, (pImageLinkText->state == LINKSTATE_HOVER ? m_clrLink : m_clrText));
 					}
@@ -1140,7 +1130,7 @@ void CListView::Draw()
 
 		// draw rating
 
-		if (m_strRatingServ == _T("imdb.com") && IsValidId(mov.strIMDbID))
+		if (mov.fRating != 0.0f || mov.nVotes != 0)
 		{
 			float fRating = mov.fRating;
 			float fRatingMax = mov.fRatingMax;
@@ -1231,10 +1221,15 @@ void CListView::Draw()
 			SelectObject(m_mdc, hPrevFont);
 
 			LINK *pLink = m_links.AddNew();
-			if (m_strRatingServ == _T("imdb.com"))
+			if (IsValidId(mov.strIMDbID))
 			{
 				pLink->strText = _T("IMDb");
 				pLink->strURL = _T("http://www.imdb.com/title/") + mov.strIMDbID + _T("/");
+			}
+			else if (IsValidId(mov.strTMDBID))
+			{
+				pLink->strText = _T("TMDB");
+				pLink->strURL = _T("https://www.themoviedb.org/movie/") + mov.strTMDBID;
 			}
 			else
 				ASSERT(false);
@@ -1252,7 +1247,7 @@ void CListView::Draw()
 
 			// Draw metascore if active service is IMDB
 
-			if (mov.nMetascore >= 0 && m_strRatingServ == _T("imdb.com"))
+			if (mov.nMetascore >= 0)
 			{
 				hPrevFont = (HFONT)SelectObject(m_mdc, m_fntText);
 				GetTextExtentPoint32(m_mdc, _T("Metascore"), &sz);
@@ -1298,7 +1293,7 @@ void CListView::Draw()
 				SelectObject(m_mdc, hPrevFont);
 
 			}
-			else if (mov.fIMDbRating != 0.0f && m_strRatingServ != _T("imdb.com"))
+			else if (mov.fIMDbRating != 0.0f)
 			{
 				// Draw IMDb rating if active service is not IMDb
 

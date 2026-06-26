@@ -48,7 +48,6 @@ protected:
 	CToolBarButton m_btnPlay, m_btnDir, m_btnSeen, m_btnEdit, m_btnHide, m_btnDelete, m_btnRefresh;
 	INT_PTR m_nHoverMov;
 	bool m_bScrolling, m_bNormalizeRatings, m_bCaptureM;
-	RString m_strRatingServ;
 	RObArray<RString> m_servicesInUse;
 	double m_dTouchScrollSpeed;
 	int m_nTouchScrollElapse;

@@ -44,17 +44,6 @@ bool CorrectPreferences()
 	prefMgr.SetStr(_T("Database"), _T("CacheDirectory"), _T("Cache"), false);
 
 	prefMgr.SetStr(_T("InfoService"), _T("OnlyUse"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Title"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Year"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Genres"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Countries"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Runtime"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Storyline"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Directors"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Writers"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Stars"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Poster"), _T("tmdb.org"), false);
-	prefMgr.SetStr(_T("InfoService"), _T("Rating"), _T("tmdb.org"), false);
 
 	prefMgr.SetBool(_T("Search"), _T("Instantly"), true, false);
 	prefMgr.SetBool(_T("Search"), _T("Literally"), false, false);

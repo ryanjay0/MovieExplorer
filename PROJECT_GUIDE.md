@@ -262,8 +262,7 @@ Preferences stored in `Preferences.xml` alongside the exe. Managed by `RPreferen
 | Database | IndexDirectories | true | Index directory names as movies |
 | Database | MaxInfoAge | 2 | Weeks before cache is considered stale |
 | Database | CacheDirectory | Cache | Cache folder for XML/poster data |
-| InfoService | OnlyUse | tmdb.org | Use only this service (empty = combined) |
-| InfoService | Title/Year/Genres/etc. | tmdb.org | Per-field service assignment |
+| InfoService | OnlyUse | tmdb.org | Use only this service (empty = combined TMDB+OMDb) |
 | MainWnd | x, y, cx, cy | 150, 30, 950, 750 | Window position/size |
 | Search | Instantly | true | Search as you type |
 | Search | Literally | false | Literal search (no stemming) |
@@ -510,6 +509,7 @@ All dimensions use `SCX()`/`SCY()` (scale) and `DUX()`/`DUY()` (dialog units) ma
 33. **Old VS projects removed** — Deleted VS2010/ and VS2013/ directories (CI uses VS2015 only)
 34. **Win8/WinVista/Win2K helpers removed** — Deleted `IsWin8()`, `IsWinVista()`, `IsWin2K()` from `general.h`; removed last `IsWin8()` caller in `CategoryBar.cpp`
 35. **Dead code cleanup** — Removed orphaned `.new` backup files, `IndonesiaLanguage` file, commented-out sort constants, commented-out theme fallback, dead ListView experiment
+36. **Per-field service dropdowns removed** — Removed 11 vestigial combo boxes from Database options page (Title/Year/Genres/etc. service selectors); ratings now display whenever data exists, actor links use TMDB person IDs
 
 ### What Still Needs Work
 
