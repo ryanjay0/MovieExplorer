@@ -327,48 +327,7 @@ void CDatabasePage::OnCommand(WORD id, WORD notifyCode, HWND hWndControl)
 
 		if (hWndControl == m_cbOnlyUse)
 		{
-			bool bCombined = (m_cbOnlyUse.GetSel() == m_cbOnlyUse.GetCount()-1);
-
-			EnableWindow(m_cbTitle, bCombined);
-			EnableWindow(m_cbYear, bCombined);
-			EnableWindow(m_cbGenres, bCombined);
-			EnableWindow(m_cbCountries, bCombined);
-			EnableWindow(m_cbRuntime, bCombined);
-			EnableWindow(m_cbStoryline, bCombined);
-			EnableWindow(m_cbDirectors, bCombined);
-			EnableWindow(m_cbWriters, bCombined);
-			EnableWindow(m_cbStars, bCombined);
-			EnableWindow(m_cbPoster, bCombined);
-			EnableWindow(m_cbRating, bCombined);
-
-			if (!bCombined)
-			{
-				m_cbTitle.SetSel(m_cbTitle.GetCount()-1);
-				m_cbYear.SetSel(m_cbYear.GetCount()-1);
-				m_cbGenres.SetSel(m_cbGenres.GetCount()-1);
-				m_cbCountries.SetSel(m_cbCountries.GetCount()-1);
-				m_cbRuntime.SetSel(m_cbRuntime.GetCount()-1);
-				m_cbStoryline.SetSel(m_cbStoryline.GetCount()-1);
-				m_cbDirectors.SetSel(m_cbDirectors.GetCount()-1);
-				m_cbWriters.SetSel(m_cbWriters.GetCount()-1);
-				m_cbStars.SetSel(m_cbStars.GetCount()-1);
-				m_cbPoster.SetSel(m_cbPoster.GetCount()-1);
-				m_cbRating.SetSel(m_cbRating.GetCount()-1);
-
-				RString strServiceName = m_cbOnlyUse.GetText(m_cbOnlyUse.GetSel());
-
-				m_cbTitle.SetSel(strServiceName);
-				m_cbYear.SetSel(strServiceName);
-				m_cbGenres.SetSel(strServiceName);
-				m_cbCountries.SetSel(strServiceName);
-				m_cbRuntime.SetSel(strServiceName);
-				m_cbStoryline.SetSel(strServiceName);
-				m_cbDirectors.SetSel(strServiceName);
-				m_cbWriters.SetSel(strServiceName);
-				m_cbStars.SetSel(strServiceName);
-				m_cbPoster.SetSel(strServiceName);
-				m_cbRating.SetSel(strServiceName);
-			}
+			SetChanged();
 		}
 	}
 }
